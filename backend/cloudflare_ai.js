@@ -61,7 +61,10 @@ Example output format:
     if (startIdx === -1 || endIdx === -1) {
       throw new Error('AI output is not a JSON Array');
     }
-    return JSON.parse(content.substring(startIdx, endIdx));
+    let jsonStr = content.substring(startIdx, endIdx);
+    // Replace single quotes with double quotes for JSON parsing compatibility
+    jsonStr = jsonStr.replace(/'/g, '"');
+    return JSON.parse(jsonStr);
   } catch (err) {
     console.error('Failed to parse outline JSON:', content);
     throw new Error('Failed to parse outline JSON: ' + err.message);
@@ -125,7 +128,10 @@ Return ONLY a JSON array matching the structure below. Do not include any markdo
     if (startIdx === -1 || endIdx === -1) {
       throw new Error('AI output is not a JSON Array');
     }
-    return JSON.parse(content.substring(startIdx, endIdx));
+    let jsonStr = content.substring(startIdx, endIdx);
+    // Replace single quotes with double quotes for JSON parsing compatibility
+    jsonStr = jsonStr.replace(/'/g, '"');
+    return JSON.parse(jsonStr);
   } catch (err) {
     console.error('Failed to parse image prompts JSON:', content);
     throw new Error('Failed to parse image prompts JSON: ' + err.message);
