@@ -226,7 +226,7 @@ app.listen(PORT, () => {
     console.log(`[cloudflared] ${output.trim()}`);
   });
 
-  cfTunnel.stderr.on('data', (data) => {
+  cfTunnel.stderr.on('data', async (data) => {
     const output = data.toString();
     // Parse the generated trycloudflare.com URL from stderr
     const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
@@ -234,8 +234,20 @@ app.listen(PORT, () => {
       const tunnelUrl = match[0];
       console.log(`\n==================================================`);
       console.log(`🎉 Cloudflare Tunnel started successfully!`);
+      console.log(`📡 Syncing tunnel URL to Cloud...`);
+      
+      try {
+        await fetch('https://kvdb.io/auto_youtube_deca8bd010fec938/backend_url', {
+          method: 'POST',
+          body: tunnelUrl
+        });
+        console.log(`🚀 Sync complete! Backend URL stored on Cloud.`);
+      } catch (err) {
+        console.error(`⚠️ Failed to sync backend URL to KV: ${err.message}`);
+      }
+
       console.log(`👉 Open dashboard link:`);
-      console.log(`https://auto-youtube-baj.pages.dev/?backend=${tunnelUrl}`);
+      console.log(`https://auto-youtube-baj.pages.dev`);
       console.log(`==================================================\n`);
     }
   });
