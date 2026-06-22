@@ -1,41 +1,41 @@
-# กฎเกณฑ์สำหรับ AI Agent ในการพัฒนาโปรเจกต์ Auto YouTube
+# AI Agent Rules for Auto YouTube Project
 
-โปรเจกต์นี้ใช้หลักการเขียนโค้ดตามสไตล์ **Lazy Senior Developer** (อิงจากกติกาของ Ponytail ใน `.agents/ponytail/AGENTS.md`) และกฎเฉพาะของโปรเจกต์นี้
-
----
-
-## 1. กฎการเขียนโค้ดสไตล์ Ponytail (Lazy Senior Dev Mode)
-
-1. **ประเมินตามบันได 6 ขั้นก่อนลงมือเขียน**:
-   - งานนี้จำเป็นต้องสร้างหรือไม่? (YAGNI - หากไม่จำเป็นให้ข้าม)
-   - ใช้โมดูลมาตรฐาน (Standard Library) หรือความสามารถดั้งเดิมของแพลตฟอร์ม (Native Platform) แทนการลงไลบรารีใหม่ได้หรือไม่? (เช่น ใช้ `<input type="date">` แทนไลบรารีปฏิทิน, ใช้ Vanilla CSS แทน JS)
-   - เขียนให้สั้นลงในบรรทัดเดียวได้หรือไม่?
-   - หากต้องเขียน ให้เขียนโค้ดที่สั้นและเรียบง่ายที่สุดที่ทำงานได้จริง (Boring over clever)
-2. **การอ้างอิงและการย่อโค้ด**:
-   - ห้ามสร้าง Abstraction หรือโครงสร้างที่ซับซ้อนเกินกว่าคำขอ (เช่น ห้ามทำ Interface/Factory ที่มีคลาสลูกเพียงตัวเดียว)
-   - ลบโค้ดส่วนที่ไม่ใช้ออก ดีกว่าเขียนเพิ่ม (Deletion over addition)
-   - ใส่คอมเมนต์ระบุจุดที่ลดความซับซ้อนลงด้วยรูปแบบ `// ponytail: [คำอธิบาย]`
+This project adheres to the **Lazy Senior Developer** (Ponytail style) coding guidelines alongside project-specific rules.
 
 ---
 
-## 2. กฎเฉพาะสำหรับโปรเจกต์ Auto YouTube
+## 1. Ponytail Style Rules (Lazy Senior Dev Mode)
 
-1. **การจัดการจุดอ้างอิงของเบราว์เซอร์ (DOM Selectors)**:
-   - ห้ามเขียน CSS Selectors หรือ XPath ฝังลงในโมดูลบอท (เช่น `voicertool_tts.js`, `google_flow.js`, `youtube_upload.js`) เด็ดขาด
-   - **บังคับ** ให้ดึงค่ามาจากไฟล์รวมศูนย์ที่ `docs/SELECTORS.md` เพื่อให้เมื่อหน้าเว็บอัปเดต จะสามารถแก้ไขตำแหน่งปุ่มได้จากจุดเดียว
-2. **การติดต่อสื่อสารแบบ Real-time**:
-   - การทำงานที่ใช้เวลานาน (เช่น บอทกำลังกดสร้างเสียง เจนภาพ หรือรัน FFmpeg) จะต้องส่ง Log สถานะแบบละเอียดและเรียลไทม์ผ่าน **Server-Sent Events (SSE)** กลับไปแสดงผลที่หน้าจอ Dashboard เสมอ
-3. **การทำงานแบบ Headless / Headful**:
-   - สคริปต์บอท Playwright จะต้องรองรับการสลับโหมด `headless: true/false` ผ่านตัวแปรสภาพแวดล้อม (Environment Variables) หรือออปชันจากหน้าบ้าน
-4. **การใช้ภาษาในโค้ดและเอกสาร (English-Only Rule)**:
-   - **บังคับ** ให้โค้ด, ความคิดเห็น (Comments), ข้อมูล Log และเอกสารทุกฉบับในคลังนี้ (ยกเว้นไฟล์ `implementation_plan.md`) เขียนด้วย**ภาษาอังกฤษ (English) ทั้งหมด** ห้ามใช้ภาษาไทยเด็ดขาด เพื่อให้สากลและป้องกันการโหลด Token ซ้ำซ้อนสำหรับ AIs ตัวอื่น ๆ
+1. **Evaluate the 6-rung ladder before writing any code**:
+   - Does this task need to be built at all? (YAGNI - skip if not necessary)
+   - Can the standard library or native platform features handle it? (e.g., `<input type="date">` instead of date picker libraries, CSS over JS, native FS over database)
+   - Can it be written in a single line?
+   - If code is required, write the simplest, shortest code that works (Boring over clever).
+2. **Abstractions & Code Cleanliness**:
+   - Do not create unrequested abstractions (no single-implementation interfaces, no config files for fixed values).
+   - Deletion over addition. Remove unused code rather than writing new code.
+   - Document shortcut intentions using comments starting with `// ponytail: [description]`.
 
 ---
 
-## 3. กฎการอัปเดตและ Deploy อัตโนมัติ (CI/CD Rule)
+## 2. Project-Specific Rules (Auto YouTube)
 
-1. **บังคับทำการ Commit และ Push ทุกครั้งหลังแก้โค้ด**:
-   - ทุกครั้งที่มีการแก้ไข เพิ่ม หรือลบไฟล์โค้ดในโปรเจกต์นี้ AI Agent **ต้องสั่งรันคำสั่ง Git Add, Commit และ Push (ไปที่รีโมท `origin main`) ทันที** เพื่อรองรับระบบ Auto Deploy บน Cloudflare Pages ของผู้ใช้
-   - ในประวัติการบันทึก (Commit Message) ให้สรุปสั้น ๆ ว่าแก้ไขอะไรสไตล์ Lazy Senior Dev เช่น `git commit -m "fix: adjust select elements in voicertool tts"`
-2. **บังคับทำการทดสอบระบบก่อนส่งมอบ (Self-Testing Rule)**:
-   - ทุกครั้งที่มีการแก้ไขหรือเขียนโค้ดเพิ่มเติม AI Agent **ต้องทำการตรวจสอบไวยากรณ์และทดลองรันด้วยตัวเองก่อนเสมอ** เพื่อเมคชัวร์ว่าไม่ติดบั๊กหรือมี Error เกิดขึ้น และโปรเจกต์ต้องอยู่ในสถานะที่พร้อมใช้งานได้จริง จึงจะสามารถส่งมอบงานหรือรายงานสรุปผลให้ผู้ใช้ทราบได้
+1. **DOM Selector Management**:
+   - Never hardcode CSS Selectors or XPath paths in automation scripts (e.g., `voicertool_tts.js`, `google_flow.js`, `youtube_upload.js`).
+   - **Mandatory**: Retrieve all selectors from the central selector file `docs/SELECTORS.md`.
+2. **Real-time Status Logging**:
+   - Long-running backend processes (TTS download, image rendering, FFmpeg compiling) must stream detailed status logs to the dashboard in real-time using **Server-Sent Events (SSE)**.
+3. **Headless / Headful Browsing**:
+   - Playwright browser scripts must support toggling `headless: true/false` via environment variables or frontend options.
+4. **Codebase Language Policy (English-Only)**:
+   - All source code, configs, comments, logs, and documentation files (except `implementation_plan.md` artifact) MUST be written in English.
+
+---
+
+## 3. Continuous Integration & Auto Deployment (CI/CD)
+
+1. **Mandatory Git Push after Edits**:
+   - Every time a file is modified, added, or deleted, the AI Agent **MUST execute Git Add, Commit, and Push to the remote `origin main` immediately** to trigger Cloudflare Pages auto-deploy.
+   - Keep commit messages short and clear, summarizing the change in a lazy senior developer style (e.g., `git commit -m "fix: adjust select elements in voicertool tts"`).
+2. **Mandatory Self-Testing**:
+   - Before delivering any work or summarizing progress, the AI Agent **must verify the syntax and run the system locally** to guarantee there are no bugs or crash errors. Delivering untested code is strictly prohibited.
