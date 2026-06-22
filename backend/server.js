@@ -217,9 +217,12 @@ app.listen(PORT, () => {
   console.log(`==================================================`);
   
   // ponytail: Spawn cloudflared tunnel automatically on startup to connect to Cloudflare Pages dashboard.
-  console.log(`⚡ Launching Cloudflare Tunnel automatically...`);
   const tunnelBin = path.resolve('./node_modules/cloudflared/bin/cloudflared.exe');
   const cfTunnel = spawn(tunnelBin, ['tunnel', '--url', `http://localhost:${PORT}`]);
+
+  cfTunnel.on('error', (err) => {
+    console.error(`[cloudflared-error] Failed to start tunnel process: ${err.message}`);
+  });
 
   cfTunnel.stdout.on('data', (data) => {
     const output = data.toString();
@@ -228,6 +231,7 @@ app.listen(PORT, () => {
 
   cfTunnel.stderr.on('data', async (data) => {
     const output = data.toString();
+    console.log(`[cloudflared-err] ${output.trim()}`);
     // Parse the generated trycloudflare.com URL from stderr
     const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
     if (match) {
@@ -254,5 +258,9 @@ app.listen(PORT, () => {
 
   cfTunnel.on('close', (code) => {
     console.log(`[cloudflared] Tunnel process exited with code ${code}`);
+    if (code !== 0) {
+      console.log(`💡 Tip: Cloudflare trycloudflare.com service might be experiencing temporary downtime or rate-limiting. The local server is still running on port ${PORT}.`);
+    }
   });
 });
+
