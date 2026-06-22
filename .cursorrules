@@ -5,6 +5,7 @@
 - **DOM Selectors Separation**: Never hardcode CSS/XPath Selectors inside Playwright automation files. Always read them from `docs/SELECTORS.md`.
 - **SSE Real-time Logging**: Long-running processes (TTS, FFmpeg, Playwright runs) must stream detailed status logs to the client via Server-Sent Events (SSE).
 - **Strict English Only**: All source code, configs, comments, logs, and other files (except `implementation_plan.md` artifact) MUST be written in English. No Thai text allowed.
+- **Mandatory Self-Testing**: After editing or adding code, you MUST test it locally to verify there are no syntax errors or bugs. Deliver the task ONLY when it is fully working and verified.
 
 ## 🧱 2. Code Quality & Size Control
 - **Max File Length**: Any source code file MUST NOT exceed 300-400 lines. Split logic into sub-modules if it exceeds the limit.
