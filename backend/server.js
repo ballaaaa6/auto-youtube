@@ -218,7 +218,8 @@ app.listen(PORT, () => {
   
   // ponytail: Spawn cloudflared tunnel automatically on startup to connect to Cloudflare Pages dashboard.
   console.log(`⚡ Launching Cloudflare Tunnel automatically...`);
-  const cfTunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${PORT}`]);
+  const tunnelBin = path.resolve('./node_modules/cloudflared/bin/cloudflared.exe');
+  const cfTunnel = spawn(tunnelBin, ['tunnel', '--url', `http://localhost:${PORT}`]);
 
   cfTunnel.stdout.on('data', (data) => {
     const output = data.toString();
