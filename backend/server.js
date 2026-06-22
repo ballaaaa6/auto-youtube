@@ -2,11 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import dotenv from 'dotenv';
 
-import { generateScript, transcribeAudio } from './cloudflare_ai.js';
+import { 
+  generateOutline, 
+  generateSectionNarration, 
+  transcribeAudio, 
+  generateImagePromptsForSegments 
+} from './cloudflare_ai.js';
 import { runTTS } from './automations/voicertool_tts.js';
 import { mergeAudio, trimSilence } from './audio_processor.js';
 import { runGoogleFlow } from './automations/google_flow.js';
@@ -22,14 +27,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Temp directory setup
 const TEMP_DIR = path.resolve('./temp');
 const OUTPUT_DIR = path.resolve('./output');
 [TEMP_DIR, OUTPUT_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Calculate audio duration in seconds using ffprobe
+// Calculate audio duration
 async function getAudioDuration(filePath) {
   const cmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`;
   const { stdout } = await execPromise(cmd);
@@ -37,22 +41,38 @@ async function getAudioDuration(filePath) {
 }
 
 /**
- * API: Generate script draft from topic
+ * API: Generate full narration script in 2 steps (Outline -> Chunk Expansion)
  */
 app.post('/api/generate-script', async (req, res) => {
   const { topic } = req.body;
-  if (!topic) return res.status(400).json({ error: 'Topic query parameter is required' });
+  if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
   try {
-    const script = await generateScript(topic);
+    console.log(`[Script Gen] Generating outline for topic: "${topic}"...`);
+    // Step 1: Generate Outline using Llama 3.3 70B
+    const outline = await generateOutline(topic);
+    console.log(`[Script Gen] Outline created with ${outline.length} sections.`);
+
+    // Step 2: Expand each section to narration text using Llama 3.1 8B
+    const script = [];
+    for (let i = 0; i < outline.length; i++) {
+      console.log(`[Script Gen] Expanding section ${i + 1}/${outline.length}: "${outline[i]}"...`);
+      const narration = await generateSectionNarration(topic, outline[i], i + 1, outline.length);
+      script.push({
+        sectionTitle: outline[i],
+        narration: narration
+      });
+    }
+
     res.json({ script });
   } catch (err) {
+    console.error('[Script Gen] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 /**
- * API (SSE): Run automation pipeline and stream real-time logs
+ * API (SSE): Runs complete audio-first video generation pipeline
  */
 app.get('/api/run-pipeline', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -80,19 +100,19 @@ app.get('/api/run-pipeline', async (req, res) => {
     return;
   }
 
-  // Clear previous temp files
+  // Clear temp files
   try {
     fs.readdirSync(TEMP_DIR).forEach(file => {
-      fs.unlinkSync(path.join(TEMP_DIR, file));
+      const p = path.join(TEMP_DIR, file);
+      if (fs.statSync(p).isFile()) fs.unlinkSync(p);
     });
   } catch (e) {}
 
   try {
     sendLog('=== Starting Auto YouTube Video Generation Pipeline ===', 5);
     
-    // Step 1: TTS Generation
+    // Step 1: TTS Generation on each narration part
     sendLog('Step 1/6: Synthesizing narration audio via voicertool.com...', 10);
-    const audioParts = [];
     const trimmedParts = [];
     
     for (let i = 0; i < script.length; i++) {
@@ -106,40 +126,41 @@ app.get('/api/run-pipeline', async (req, res) => {
       sendLog(`  Trimming silence segments for snippet ${i + 1}...`);
       await trimSilence(origAudioPath, trimmedAudioPath);
       
-      audioParts.push(origAudioPath);
       trimmedParts.push(trimmedAudioPath);
     }
 
-    // Step 2: Merge audio snippets
-    sendLog('Step 2/6: Merging audio segments and compressing silence gap...', 35);
+    // Step 2: Merge audio
+    sendLog('Step 2/6: Merging audio segments into a continuous narration track...', 30);
     const mergedAudioPath = path.join(TEMP_DIR, 'final_narration.mp3');
     await mergeAudio(trimmedParts, mergedAudioPath);
     sendLog('  Audio segments merged successfully.');
 
-    // Calculate timestamps boundaries for images based on duration
-    const scenes = [];
-    let currentStart = 0;
-    for (let i = 0; i < script.length; i++) {
-      const duration = await getAudioDuration(trimmedParts[i]);
-      scenes.push({
-        start: currentStart,
-        end: currentStart + duration,
-        prompt: script[i].imagePrompt
-      });
-      currentStart += duration;
-    }
-
-    // Step 3: Transcription and SRT generation
-    sendLog('Step 3/6: Analyzing voice speech timestamps using Cloudflare Whisper...', 50);
+    // Step 3: Transcription and SRT generation using Cloudflare Whisper
+    sendLog('Step 3/6: Analyzing voice speech timestamps using Cloudflare Whisper...', 45);
     const audioBuffer = fs.readFileSync(mergedAudioPath);
     const whisperResult = await transcribeAudio(audioBuffer);
     
     const srtPath = path.join(TEMP_DIR, 'subtitles.srt');
     generateSRT(whisperResult.segments, srtPath);
-    sendLog('  Subtitles SRT generated successfully.');
+    sendLog('  Subtitles SRT file generated.');
 
-    // Step 4: Image generation
-    sendLog('Step 4/6: Generating images via Google Flow browser automation...', 65);
+    // Step 4: Generate Image Prompts for each timestamp segment
+    sendLog('Step 4/6: Generating matching image prompts for each spoken segment...', 60);
+    const whisperSegments = whisperResult.segments; // array of { start, end, text }
+    const promptsResult = await generateImagePromptsForSegments(whisperSegments);
+    
+    // Map prompts back to segments
+    const scenes = whisperSegments.map((seg, idx) => {
+      const promptObj = promptsResult.find(p => p.id === idx) || { imagePrompt: `A beautiful concept art matching the text: ${seg.text}` };
+      return {
+        start: seg.start,
+        end: seg.end,
+        prompt: promptObj.imagePrompt
+      };
+    });
+
+    // Step 5: Generate Images using Google Flow Playwright Bot
+    sendLog('Step 5/6: Launching Google Flow browser bot to create segment visuals...', 75);
     const imagePrompts = scenes.map(s => s.prompt);
     const imageOutputDir = path.join(TEMP_DIR, 'images');
     const imagePaths = await runGoogleFlow(imagePrompts, imageOutputDir, (logMsg) => sendLog(`  [Image Bot] ${logMsg}`));
@@ -148,13 +169,13 @@ app.get('/api/run-pipeline', async (req, res) => {
       scenes[i].imagePath = imagePaths[i];
     }
 
-    // Step 5: Render video
-    sendLog('Step 5/6: Compiling video slides, mixing audio and burning subtitles...', 80);
+    // Step 6: Render final video with burnt subtitles
+    sendLog('Step 6/6: Compiling video slides, mixing audio track, and burning subtitles...', 90);
     const outputVideoName = `video_${Date.now()}.mp4`;
     const finalVideoPath = path.join(OUTPUT_DIR, outputVideoName);
     
     await compileVideo(scenes, mergedAudioPath, srtPath, finalVideoPath, TEMP_DIR);
-    sendLog(`🎉 Video compiled successfully: ${outputVideoName}`, 95);
+    sendLog(`🎉 Video compiled successfully: ${outputVideoName}`, 98);
 
     res.write(`data: ${JSON.stringify({ status: 'done', videoUrl: `/output/${outputVideoName}`, videoPath: finalVideoPath })}\n\n`);
     res.end();
@@ -169,7 +190,7 @@ app.get('/api/run-pipeline', async (req, res) => {
 app.use('/output', express.static(OUTPUT_DIR));
 
 /**
- * API: Upload video to YouTube
+ * API: Upload video to YouTube Studio
  */
 app.post('/api/upload-youtube', async (req, res) => {
   const { videoPath, title, description } = req.body;
@@ -189,9 +210,36 @@ app.post('/api/upload-youtube', async (req, res) => {
   }
 });
 
+// Start Express Server
 app.listen(PORT, () => {
   console.log(`==================================================`);
   console.log(`🤖 Auto YouTube Backend running on port ${PORT}`);
-  console.log(`🔗 Console panel deployed and active`);
   console.log(`==================================================`);
+  
+  // ponytail: Spawn cloudflared tunnel automatically on startup to connect to Cloudflare Pages dashboard.
+  console.log(`⚡ Launching Cloudflare Tunnel automatically...`);
+  const cfTunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${PORT}`]);
+
+  cfTunnel.stdout.on('data', (data) => {
+    const output = data.toString();
+    console.log(`[cloudflared] ${output.trim()}`);
+  });
+
+  cfTunnel.stderr.on('data', (data) => {
+    const output = data.toString();
+    // Parse the generated trycloudflare.com URL from stderr
+    const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+    if (match) {
+      const tunnelUrl = match[0];
+      console.log(`\n==================================================`);
+      console.log(`🎉 Cloudflare Tunnel started successfully!`);
+      console.log(`👉 Open dashboard link:`);
+      console.log(`https://auto-youtube-baj.pages.dev/?backend=${tunnelUrl}`);
+      console.log(`==================================================\n`);
+    }
+  });
+
+  cfTunnel.on('close', (code) => {
+    console.log(`[cloudflared] Tunnel process exited with code ${code}`);
+  });
 });

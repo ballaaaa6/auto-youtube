@@ -1,5 +1,4 @@
 // Fetch DOM elements
-const backendUrlInput = document.getElementById('backend-url');
 const topicInput = document.getElementById('topic-input');
 const btnGenerateScript = document.getElementById('btn-generate-script');
 const scriptEditor = document.getElementById('script-editor');
@@ -15,9 +14,14 @@ const btnDownloadVideo = document.getElementById('btn-download-video');
 
 let generatedVideoPath = ''; // Store absolute path of generated video on local backend
 
-// Get base URL for backend APIs
+// Get base URL for backend APIs from URL parameter or localStorage
 function getBackendUrl() {
-  return backendUrlInput.value.replace(/\/$/, ''); // Remove trailing slash
+  const urlParams = new URLSearchParams(window.location.search);
+  const backendParam = urlParams.get('backend');
+  if (backendParam) {
+    localStorage.setItem('backend_url', backendParam.replace(/\/$/, ''));
+  }
+  return localStorage.getItem('backend_url') || 'http://localhost:3000';
 }
 
 // Append new message line in terminal logger

@@ -4,7 +4,7 @@ dotenv.config();
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
-// ponytail: Use native fetch available in Node.js 18+ instead of installing axios to keep dependencies minimal.
+// ponytail: Use native fetch in Node.js 18+ to save dependencies.
 async function runModel(model, inputData) {
   if (!ACCOUNT_ID || !API_TOKEN) {
     throw new Error('Please configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in .env file');
@@ -31,23 +31,83 @@ async function runModel(model, inputData) {
 }
 
 /**
- * Generate video script in Thai and image prompt descriptions in English.
+ * Step 1: Generate outline (chapters/sections) for the topic.
+ * Uses Llama 3.3 70B for maximum storytelling intelligence.
  */
-export async function generateScript(topic) {
-  const prompt = `You are a professional YouTube scriptwriter.
-Video Topic: "${topic}"
-Target format: Long-form landscape video (about 10-12 minutes long).
-Write narration script entirely in Thai. Divide the video into short sections/parts (around 100-300 words each to keep TTS downloads clean and fast).
+export async function generateOutline(topic) {
+  const prompt = `You are a professional documentary scriptwriter.
+Generate a structured storyline outline in Thai for the topic: "${topic}".
+Create exactly 8 to 10 narrative chapters/sections. Keep them logically connected.
 
-For each section, return a JSON object with:
-1. "narration": The Thai narration text for that section (pure Thai, no brackets or special characters).
-2. "imagePrompt": An English prompt describing the scene visual to generate an AI image (e.g., "A cinematic wide shot of ancient Rome under golden hour, high detail").
+Return ONLY a JSON array of strings containing the chapter names/themes. Do not write any conversational text or formatting outside the JSON array.
+Example output format:
+[
+  "บทนำ: จุดเริ่มต้นของ...",
+  "บทที่ 2: ความลึกลับที่ซ่อนอยู่...",
+  "บทสรุป: สิ่งที่เราค้นพบ..."
+]`;
 
-Example output format (Return ONLY the JSON array, no extra conversational text or explanations outside the JSON):
+  const result = await runModel('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
+      { role: 'user', content: prompt }
+    ],
+  });
+
+  const content = result.result.response || result.result.text;
+  try {
+    const startIdx = content.indexOf('[');
+    const endIdx = content.lastIndexOf(']') + 1;
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error('AI output is not a JSON Array');
+    }
+    return JSON.parse(content.substring(startIdx, endIdx));
+  } catch (err) {
+    console.error('Failed to parse outline JSON:', content);
+    throw new Error('Failed to parse outline JSON: ' + err.message);
+  }
+}
+
+/**
+ * Step 2: Expand a specific outline chapter to detailed Thai narration.
+ * Uses Llama 3.1 8B for fast, cost-efficient generation.
+ */
+export async function generateSectionNarration(topic, sectionTitle, index, total) {
+  const prompt = `You are writing a detailed video documentary in Thai.
+Topic: "${topic}"
+Current Section Title: "${sectionTitle}" (Section ${index} of ${total})
+
+Write a detailed, engaging narration spoken in Thai (around 150-250 words) for this section.
+Use a professional, dramatic, and intriguing storytelling tone.
+Write only the spoken narration text. Do not include section headings, narrator cues, bracketed text, or punctuation marks like asterisks. Return purely the spoken Thai text.`;
+
+  const result = await runModel('@cf/meta/llama-3.1-8b-instruct', {
+    messages: [
+      { role: 'system', content: 'You are a professional documentary narrator writing script text.' },
+      { role: 'user', content: prompt }
+    ],
+  });
+
+  return (result.result.response || result.result.text).trim();
+}
+
+/**
+ * Step 3: Analyze timestamped narration segments and write descriptive image prompts.
+ * Uses Llama 3.1 8B.
+ */
+export async function generateImagePromptsForSegments(segments) {
+  const prompt = `You are a cinematic concept artist.
+Given the following spoken segments of a Thai video script, generate a highly descriptive visual image prompt in English for each segment.
+The prompt should describe a landscape/cinematic scene matching the spoken text, optimized for an AI image generator (e.g., "A cinematic wide shot of...").
+
+Input segments list:
+${JSON.stringify(segments.map((s, idx) => ({ id: idx, text: s.text })))}
+
+Return ONLY a JSON array matching the structure below. Do not include any markdown format outside the JSON array:
 [
   {
-    "narration": "ยินดีต้อนรับทุกท่านเข้าสู่เรื่องราวของ...",
-    "imagePrompt": "A high detail cinematic view of..."
+    "id": 0,
+    "imagePrompt": "A highly detailed cinematic image prompt in English..."
   }
 ]`;
 
@@ -67,13 +127,13 @@ Example output format (Return ONLY the JSON array, no extra conversational text 
     }
     return JSON.parse(content.substring(startIdx, endIdx));
   } catch (err) {
-    console.error('Failed to parse script JSON:', content);
-    throw new Error('Failed to parse the script JSON structure: ' + err.message);
+    console.error('Failed to parse image prompts JSON:', content);
+    throw new Error('Failed to parse image prompts JSON: ' + err.message);
   }
 }
 
 /**
- * Send audio binary buffer to Cloudflare Whisper to transcribe and get word/sentence timestamps.
+ * Whisper transcription helper
  */
 export async function transcribeAudio(audioBuffer) {
   if (!ACCOUNT_ID || !API_TOKEN) {
