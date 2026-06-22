@@ -58,7 +58,10 @@ Example output format:
   try {
     const startIdx = content.indexOf('[');
     const endIdx = content.lastIndexOf(']') + 1;
-    if (startIdx === -1 || endIdx === -1) {
+    console.log('DEBUG generateOutline indexes:', { startIdx, endIdx, length: content ? content.length : 0 });
+    console.log('DEBUG generateOutline content type:', typeof content);
+    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+      console.log('DEBUG generateOutline raw content:', content);
       throw new Error('AI output is not a JSON Array');
     }
     let jsonStr = content.substring(startIdx, endIdx);
