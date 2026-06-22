@@ -4,10 +4,10 @@ dotenv.config();
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
-// ponytail: ใช้ native fetch ที่มีมาใน Node.js 18+ แทนการลง axios เพื่อประหยัดพื้นที่และไม่ลงไลบรารีซ้ำซ้อน
+// ponytail: Use native fetch available in Node.js 18+ instead of installing axios to keep dependencies minimal.
 async function runModel(model, inputData) {
   if (!ACCOUNT_ID || !API_TOKEN) {
-    throw new Error('กรุณาตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_API_TOKEN ในไฟล์ .env');
+    throw new Error('Please configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in .env file');
   }
 
   const response = await fetch(
@@ -31,19 +31,19 @@ async function runModel(model, inputData) {
 }
 
 /**
- * เขียนบทวิดีโอภาษาไทยพร้อมคำสั่ง Prompt สำหรับเจนภาพของแต่ละช่วง
+ * Generate video script in Thai and image prompt descriptions in English.
  */
 export async function generateScript(topic) {
-  const prompt = `คุณคือคนเขียนบทช่อง YouTube มืออาชีพ
-หัวข้อคลิปคือ: "${topic}"
-ต้องการคลิปแนวนอนแบบ Long-form (ยาวประมาณ 10-12 นาที)
-ให้เขียนบทพูดเป็นภาษาไทยทั้งหมด และแบ่งเนื้อหาออกเป็นช่วง ๆ (พาร์ทละประมาณ 100-300 คำพูด เพื่อไม่ให้ยาวเกินและดาวน์โหลดเสียงได้ง่าย)
+  const prompt = `You are a professional YouTube scriptwriter.
+Video Topic: "${topic}"
+Target format: Long-form landscape video (about 10-12 minutes long).
+Write narration script entirely in Thai. Divide the video into short sections/parts (around 100-300 words each to keep TTS downloads clean and fast).
 
-สำหรับแต่ละช่วง ให้ระบุข้อมูลในรูปแบบ JSON ดังนี้:
-1. "narration": บทพูดของช่วงนั้น (ภาษาไทยล้วน ไม่มีวงเล็บหรืออักขระพิเศษ)
-2. "imagePrompt": คำสั่งภาษาอังกฤษ (English Prompt) ที่ใช้อธิบายฉากนั้น เพื่อนำไปสั่ง AI เจนภาพต่อ (เช่น "A cinematic wide shot of ancient Rome under golden hour, high detail")
+For each section, return a JSON object with:
+1. "narration": The Thai narration text for that section (pure Thai, no brackets or special characters).
+2. "imagePrompt": An English prompt describing the scene visual to generate an AI image (e.g., "A cinematic wide shot of ancient Rome under golden hour, high detail").
 
-ตัวอย่างผลลัพธ์ที่ต้องการ (ให้ส่งกลับเฉพาะ JSON Array เท่านั้น ห้ามมีคำอธิบายอื่นนอกเหนือจาก JSON):
+Example output format (Return ONLY the JSON array, no extra conversational text or explanations outside the JSON):
 [
   {
     "narration": "ยินดีต้อนรับทุกท่านเข้าสู่เรื่องราวของ...",
@@ -58,29 +58,26 @@ export async function generateScript(topic) {
     ],
   });
 
-  // คลีนค่าผลลัพธ์ที่เป็นข้อความแล้วแปลงเป็น JSON
   const content = result.result.response || result.result.text;
   try {
-    // หาจุดเริ่มต้นและจุดสิ้นสุดของ JSON array
     const startIdx = content.indexOf('[');
     const endIdx = content.lastIndexOf(']') + 1;
     if (startIdx === -1 || endIdx === -1) {
-      throw new Error('AI ส่งผลลัพธ์ไม่ใช่รูปแบบ JSON Array');
+      throw new Error('AI output is not a JSON Array');
     }
     return JSON.parse(content.substring(startIdx, endIdx));
   } catch (err) {
     console.error('Failed to parse script JSON:', content);
-    throw new Error('ไม่สามารถแปลงบทความที่ AI เจนเป็นโครงสร้างข้อมูลได้: ' + err.message);
+    throw new Error('Failed to parse the script JSON structure: ' + err.message);
   }
 }
 
 /**
- * ส่งไฟล์เสียงไปถอดความภาษาไทยพร้อมช่วงเวลา (Timestamp) รายประโยค/คำ
+ * Send audio binary buffer to Cloudflare Whisper to transcribe and get word/sentence timestamps.
  */
 export async function transcribeAudio(audioBuffer) {
-  // Cloudflare Whisper รับ body เป็น binary audio file (เช่น WebM, MP3, WAV)
   if (!ACCOUNT_ID || !API_TOKEN) {
-    throw new Error('กรุณาตั้งค่า CLOUDFLARE_ACCOUNT_ID และ CLOUDFLARE_API_TOKEN ในไฟล์ .env');
+    throw new Error('Please configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in .env file');
   }
 
   const response = await fetch(
@@ -101,6 +98,5 @@ export async function transcribeAudio(audioBuffer) {
   }
 
   const data = await response.json();
-  // Whisper บน Workers AI จะคืนค่า JSON ที่มี segments พร้อมจุดเริ่ม-สิ้นสุดเวลา (start, end, text)
   return data.result;
 }

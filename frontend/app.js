@@ -1,4 +1,4 @@
-// ดึง Element ต่าง ๆ
+// Fetch DOM elements
 const backendUrlInput = document.getElementById('backend-url');
 const topicInput = document.getElementById('topic-input');
 const btnGenerateScript = document.getElementById('btn-generate-script');
@@ -13,32 +13,32 @@ const ytDescInput = document.getElementById('yt-desc');
 const btnUploadYt = document.getElementById('btn-upload-yt');
 const btnDownloadVideo = document.getElementById('btn-download-video');
 
-let generatedVideoPath = ''; // เก็บที่อยู่ไฟล์วิดีโอสัมบูรณ์บนเซิร์ฟเวอร์โลคอล
+let generatedVideoPath = ''; // Store absolute path of generated video on local backend
 
-// ฟังก์ชันดึง URL เซิร์ฟเวอร์หลังบ้าน
+// Get base URL for backend APIs
 function getBackendUrl() {
-  return backendUrlInput.value.replace(/\/$/, ''); // ตัด / ตัวสุดท้ายออกหากมี
+  return backendUrlInput.value.replace(/\/$/, ''); // Remove trailing slash
 }
 
-// ฟังก์ชันเพิ่มบรรทัดข้อความลงใน Terminal Log
+// Append new message line in terminal logger
 function logToTerminal(message, type = 'normal') {
   const line = document.createElement('div');
   line.className = `log-line ${type}`;
   line.innerText = message;
   terminalLogs.appendChild(line);
-  terminalLogs.scrollTop = terminalLogs.scrollHeight; // สกรอลลงล่างสุดอัตโนมัติ
+  terminalLogs.scrollTop = terminalLogs.scrollHeight; // Auto-scroll to bottom
 }
 
-// สเต็ปที่ 1: เจนสคริปต์จากหัวข้อ
+// Step 1: Request script generation
 btnGenerateScript.addEventListener('click', async () => {
   const topic = topicInput.value.trim();
   if (!topic) {
-    alert('กรุณากรอกหัวข้อที่ต้องการครับ');
+    alert('Please enter a topic first.');
     return;
   }
 
   btnGenerateScript.disabled = true;
-  logToTerminal(`[ระบบ] กำลังส่งหัวข้อ "${topic}" ให้ Cloudflare AI เขียนบทความ...`, 'system');
+  logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
   
   try {
     const response = await fetch(`${getBackendUrl()}/api/generate-script`, {
@@ -49,45 +49,45 @@ btnGenerateScript.addEventListener('click', async () => {
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.error || 'เกิดข้อผิดพลาดในการเจนสคริปต์');
+      throw new Error(err.error || 'Failed to generate script');
     }
 
     const data = await response.json();
     scriptEditor.value = JSON.stringify(data.script, null, 2);
     
-    logToTerminal('✅ เขียนบทความและ Prompt เจนภาพสำเร็จ! กรุณาตรวจสอบข้อมูลในซีกซ้ายด้านล่าง', 'success');
+    logToTerminal('✅ Script and image prompts generated successfully! Please verify on the left editor.', 'success');
     btnRunPipeline.disabled = false;
     
-    // ตั้งชื่อคลิปเบื้องต้นรอไว้
+    // Set initial title and description draft
     ytTitleInput.value = topic;
-    ytDescInput.value = `วิดีโอนี้สร้างขึ้นด้วยระบบ Auto YouTube AI ในหัวข้อเรื่อง: ${topic}\n\n#AI #AutoYouTube`;
+    ytDescInput.value = `This video was generated automatically using Auto YouTube AI on the topic: ${topic}\n\n#AI #AutoYouTube`;
 
   } catch (err) {
-    logToTerminal(`❌ เจนสคริปต์ล้มเหลว: ${err.message}`, 'error');
+    logToTerminal(`❌ Generation failed: ${err.message}`, 'error');
   } finally {
     btnGenerateScript.disabled = false;
   }
 });
 
-// สเต็ปที่ 2: รัน Pipeline บอทอัตโนมัติทั้งหมด (สตรีมผ่าน SSE)
+// Step 2: Trigger the automation pipeline (via SSE)
 btnRunPipeline.addEventListener('click', () => {
   const scriptContent = scriptEditor.value.trim();
   if (!scriptContent) return;
 
-  // ตรวจเช็คว่าแก้ไขจนรูปแบบ JSON เจ๊งไหม
+  // Verify JSON format
   try {
     JSON.parse(scriptContent);
   } catch (e) {
-    alert('รูปแบบบทความ JSON ไม่ถูกต้อง กรุณาแก้ไชข้อผิดพลาดก่อนเริ่มรันบอท');
+    alert('Invalid JSON script format. Please fix the structure first.');
     return;
   }
 
-  // เตรียม UI
+  // UI State Reset
   btnRunPipeline.disabled = true;
   progressContainer.style.display = 'block';
   progressBar.style.width = '0%';
   terminalLogs.innerHTML = '';
-  logToTerminal('[ระบบ] เริ่มเชื่อมต่อข้อมูลระบบบอทเบื้องหลัง...', 'system');
+  logToTerminal('[System] Connecting to local backend pipeline...', 'system');
 
   const encodedScript = encodeURIComponent(scriptContent);
   const eventSource = new EventSource(`${getBackendUrl()}/api/run-pipeline?script=${encodedScript}`);
@@ -103,54 +103,54 @@ btnRunPipeline.addEventListener('click', () => {
       progressBar.style.width = `${data.percent}%`;
     }
 
-    // เมื่อรันจบเรียบร้อย
+    // Success state
     if (data.status === 'done') {
       eventSource.close();
       progressBar.style.width = '100%';
-      logToTerminal('🎉 บอทรันระบบครบวงจรและเรนเดอร์คลิปวิดีโอสำเร็จ!', 'success');
+      logToTerminal('🎉 Pipeline finished. Video render completed!', 'success');
       
-      // อัปเดต Video Player พรีวิว
+      // Update preview video
       const videoSrc = `${getBackendUrl()}${data.videoUrl}`;
       videoPlayer.src = videoSrc;
       videoPlayer.load();
       
-      // ปุ่มดาวน์โหลด
+      // Setup download button
       btnDownloadVideo.href = videoSrc;
       btnDownloadVideo.style.display = 'inline-flex';
       
-      // เก็บข้อมูลพาธไฟล์เพื่อใช้อัปโหลด
+      // Save local path for upload
       generatedVideoPath = data.videoPath;
       btnUploadYt.disabled = false;
       btnRunPipeline.disabled = false;
     }
 
-    // กรณีบอทค้างหรือเกิดข้อผิดพลาด
+    // Error state
     if (data.status === 'error') {
       eventSource.close();
-      logToTerminal(`❌ บอททำงานล้มเหลวระหว่างทาง: ${data.error}`, 'error');
+      logToTerminal(`❌ Pipeline failed: ${data.error}`, 'error');
       btnRunPipeline.disabled = false;
     }
   };
 
   eventSource.onerror = (err) => {
     eventSource.close();
-    logToTerminal('❌ ขัดข้องการเชื่อมต่อกับเซิร์ฟเวอร์หลังบ้าน (Connection Closed/Error)', 'error');
+    logToTerminal('❌ Backend server connection closed or timed out.', 'error');
     btnRunPipeline.disabled = false;
   };
 });
 
-// สเต็ปที่ 3: อัปโหลดคลิปขึ้น YouTube
+// Step 3: Trigger YouTube Studio upload
 btnUploadYt.addEventListener('click', async () => {
   const title = ytTitleInput.value.trim();
   const description = ytDescInput.value.trim();
 
   if (!title) {
-    alert('กรุณากรอกชื่อคลิปวิดีโอที่จะอัปโหลด');
+    alert('Please enter a video title.');
     return;
   }
 
   btnUploadYt.disabled = true;
-  logToTerminal('[ระบบ] เริ่มการเปิดเบราว์เซอร์เตรียมส่งขึ้น YouTube Studio...', 'system');
+  logToTerminal('[System] Launching browser session for YouTube Studio...', 'system');
 
   try {
     const response = await fetch(`${getBackendUrl()}/api/upload-youtube`, {
@@ -165,15 +165,15 @@ btnUploadYt.addEventListener('click', async () => {
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.error || 'เกิดข้อผิดพลาดในการอัปโหลด');
+      throw new Error(err.error || 'Upload request failed');
     }
 
     const data = await response.json();
     data.logs.forEach(log => logToTerminal(`  [YT] ${log}`));
-    logToTerminal('🎉 ดำเนินการอัปโหลด YouTube Studio Draft เรียบร้อยเสร็จสิ้น!', 'success');
+    logToTerminal('🎉 YouTube Studio upload completed! Draft saved.', 'success');
 
   } catch (err) {
-    logToTerminal(`❌ อัปโหลด YouTube ล้มเหลว: ${err.message}`, 'error');
+    logToTerminal(`❌ YouTube upload failed: ${err.message}`, 'error');
   } finally {
     btnUploadYt.disabled = false;
   }

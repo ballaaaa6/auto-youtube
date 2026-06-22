@@ -4,7 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// โหลด Selectors จาก docs/SELECTORS.md
+// Load selectors from docs/SELECTORS.md
 const SELECTORS_PATH = path.join(process.cwd(), '../docs/SELECTORS.md');
 const selectors = JSON.parse(
   fs.readFileSync(SELECTORS_PATH, 'utf-8')
@@ -15,20 +15,19 @@ const HEADLESS = process.env.HEADLESS === 'true';
 const PROFILE_PATH = path.resolve(process.env.BROWSER_PROFILE_PATH || '../profiles/user_data');
 
 /**
- * บอทเจนภาพจาก Google Flow (โครงสร้างหลักรองรับการป้อนคำสั่งและการกดปุ่มของคู่สนทนา)
- * @param {Array} prompts รายการ Prompt ภาษาอังกฤษที่ได้จากการวิเคราะห์บทพูด
- * @param {string} outputDir โฟลเดอร์ที่เก็บรูปภาพ
- * @param {Function} logCallback ฟังก์ชันแจ้งเตือนล็อกสถานะกลับไปหน้าจอแดชบอร์ด
+ * Automate image generation in Google Flow (Skeleton framework).
+ * @param {Array} prompts List of image prompts
+ * @param {string} outputDir Path to save generated images
+ * @param {Function} logCallback Log updates sender
  */
 export async function runGoogleFlow(prompts, outputDir, logCallback = console.log) {
-  logCallback(`กำลังเปิด Google Flow บราวเซอร์ (headless: ${HEADLESS})...`);
-  logCallback(`ใช้โปรไฟล์เบราว์เซอร์จากพาธ: ${PROFILE_PATH}`);
+  logCallback(`Launching Google Flow Browser (headless: ${HEADLESS})...`);
+  logCallback(`Using browser session profile: ${PROFILE_PATH}`);
   
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // ใช้ launchPersistentContext เพื่อให้จำประวัติคุกกี้/ล็อกอินบัญชี Google ค้างไว้ได้
   const context = await chromium.launchPersistentContext(PROFILE_PATH, {
     headless: HEADLESS,
     viewport: { width: 1280, height: 720 },
@@ -40,21 +39,19 @@ export async function runGoogleFlow(prompts, outputDir, logCallback = console.lo
   const imagePaths = [];
 
   try {
-    logCallback('กำลังเดินทางไปที่ Google Flow (labs.google/fx)...');
+    logCallback('Navigating to Google Flow (labs.google/fx)...');
     await page.goto('https://labs.google/fx/', { waitUntil: 'networkidle', timeout: 60000 });
     
-    // ponytail: สร้างโค้ดรับพิกัดปุ่มและกรอกคำสั่งรอไว้ล่วงหน้า
     for (let i = 0; i < prompts.length; i++) {
       const promptText = prompts[i];
       const filename = `image_${i}.png`;
       const finalImagePath = path.join(outputDir, filename);
 
-      logCallback(`[รูปที่ ${i + 1}/${prompts.length}] กำลังส่ง Prompt: "${promptText}"`);
+      logCallback(`[Image ${i + 1}/${prompts.length}] Entering Prompt: "${promptText}"`);
       
       // -------------------------------------------------------------
-      // ponytail: จุดนี้จะรองรับลำดับคำสั่งกดปุ่มที่ผู้ใช้แจ้งในภายหลัง
-      // โค้ดตัวอย่างการกรอก Prompt และกดปุ่ม:
-      //
+      // ponytail: Automation placeholder for custom user-guided clicks.
+      // E.g.,
       // await page.waitForSelector(selectors.prompt_textarea);
       // await page.fill(selectors.prompt_textarea, promptText);
       // await page.click(selectors.generate_button);
@@ -65,9 +62,7 @@ export async function runGoogleFlow(prompts, outputDir, logCallback = console.lo
       // await download.saveAs(finalImagePath);
       // -------------------------------------------------------------
 
-      // จำลองการสร้างรูปภาพชั่วคราวเพื่อรอใส่โค้ด Playwright เจนรูปของจริง
-      // โดยการสร้างภาพสี่เหลี่ยมสีพื้นสีเดียวกันเพื่อเอาไปประกอบวิดีโอเทสระบบไปก่อน
-      // (จะอัปเกรดเป็น Playwright ควบคุมเว็บของจริงเมื่อใส่ Selectors)
+      // Temporary canvas mockup for image assembly verification
       const mockCanvasScript = `
         const canvas = document.createElement('canvas');
         canvas.width = 1920;
@@ -87,18 +82,17 @@ export async function runGoogleFlow(prompts, outputDir, logCallback = console.lo
       fs.writeFileSync(finalImagePath, buffer);
       
       imagePaths.push(finalImagePath);
-      logCallback(`สร้างรูปตัวอย่างเรียบร้อย: ${filename}`);
+      logCallback(`Mock image generated: ${filename}`);
       
-      // หน่วงเวลาสุ่มเสมือนมนุษย์ทำ
       await page.waitForTimeout(2000 + Math.random() * 2000);
     }
 
   } catch (err) {
-    logCallback(`เกิดข้อผิดพลาดในการรัน Google Flow: ${err.message}`);
+    logCallback(`Google Flow automation error: ${err.message}`);
     throw err;
   } finally {
     await context.close();
-    logCallback('ปิดเบราว์เซอร์ Google Flow เรียบร้อย');
+    logCallback('Google Flow browser closed.');
   }
 
   return imagePaths;

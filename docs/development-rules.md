@@ -1,28 +1,25 @@
-# คู่มือมาตรฐานการเขียนโค้ดและข้อตกลงสำหรับ AI (Development Rules)
+# Development Rules & AI Instructions
 
-เอกสารฉบับนี้สร้างขึ้นเพื่อกำกับดูแลการเขียนโค้ดในโปรเจกต์ **Auto YouTube** ให้มีความสะอาด สะดวกต่อการแก้ไข และประหยัดทอเคนเมื่อส่งให้อินสแตนซ์ของ AGI/AI ทำงาน
+## 📏 1. File Size & Code Bloat Control (STRICT)
 
----
-
-## 📏 1. การควบคุมขนาดไฟล์และป้องกันโค้ดบวม (STRICT)
-
-- **ความยาวสูงสุดของไฟล์**: ไฟล์ซอร์สโค้ดใด ๆ (เช่น JS, CSS, HTML) **ต้องมีขนาดไม่เกิน 300-400 บรรทัด**
-- **ความยาวสูงสุดของฟังก์ชัน**: ฟังก์ชันแต่ละฟังก์ชันต้องมีความยาวไม่เกิน 50 บรรทัด (หนึ่งฟังก์ชัน = หนึ่งความรับผิดชอบ)
-- **การตัดแยกโมดูล (Refactoring)**: หากเพิ่มฟีเจอร์ใหม่แล้วทำให้ไฟล์เดิมมีความยาวเกิน 400 บรรทัด **ต้องทำการแยกโค้ดบางส่วนออกไปเป็นไฟล์ใหม่ทันที** (เช่น แยกเป็น Utility, Component, หรือ Helper)
-- **ลดการเขียนโค้ดซ้ำ (DRY Principle)**: ตรวจสอบและนำฟังก์ชันดั้งเดิมที่มีอยู่ในระบบมาใช้งานร่วมกัน ห้ามเขียนฟังก์ชันที่มีตรรกะแบบเดียวกันซ้ำใหม่ในไฟล์อื่น
+- **Max File Length**: Any source code file (e.g., JS, CSS, HTML) MUST NOT exceed 300-400 lines.
+- **Max Function Length**: Keep functions under 50 lines. One function = One responsibility.
+- **Refactoring Trigger**: If adding a new feature pushes a file over 400 lines, you MUST split the code into smaller parts (e.g., separate components, utils, or services).
+- **No Duplication (DRY Principle)**: Reuse existing code. Do not rewrite functions or helpers that already exist in the codebase.
 
 ---
 
-## 🤖 2. กฎการจัดเตรียมข้อมูลสำหรับ AI เพื่อประหยัด Token
+## 🤖 2. AI Token Efficiency Rules
 
-- **เน้นเฉพาะจุดที่เปลี่ยน (Concise Diff)**: เมื่อแนะนำหรือแก้ไขโค้ด ให้ระบุเฉพาะส่วนที่มีการแก้ไข (เช่น ใช้รูปแบบ Git Diff หรือระบุบล็อกโค้ดที่ต้องการเปลี่ยน) ห้ามเขียนโค้ดส่วนอื่นที่ไม่เกี่ยวข้องกลับมาใหม่เพื่อประหยัดจำนวน Token ในการประมวลผล
-- **ประเมินก่อนลงมือ**: หากมีงานที่ส่งผลกระทบต่อไฟล์หลาย ๆ ไฟล์ ให้สรุปแนวทางการเปลี่ยนโครงสร้างโฟลเดอร์หรือชื่อไฟล์ให้ผู้ใช้พิจารณาก่อนเริ่มเขียนโค้ดจริง
+- **Concise Code**: Provide only the code blocks that need to be changed or added. Do not output the entire unchanged file.
+- **Plan First**: Before writing code that affects multiple files or alters the project structure, list the proposed files and changes first.
+- **Language Policy**: All files, code, variables, console logs, errors, and documentation in this repository MUST be written in English. The only exception is the `implementation_plan.md` artifact.
 
 ---
 
-## 📂 3. โครงสร้างโฟลเดอร์หลักสำหรับจัดวางโค้ด
+## 📂 3. Key Directory Structure
 
-- `docs/` - เก็บเอกสารควบคุมทิศทางระบบ ตำแหน่งปุ่ม และพิมพ์เขียว
-- `backend/automations/` - เก็บสคริปต์บอท Playwright แยกตามแพลตฟอร์ม (จำกัดขนาดตามเกณฑ์ด้านบน)
-- `backend/` - ตัวประมวลผลวิดีโอ (FFmpeg) และ API Server
-- `frontend/` - หน้าควบคุมเว็บแดชบอร์ด
+- `docs/` - System architecture blueprints, element selector maps, and guidelines.
+- `backend/automations/` - Playwright automation scripts for target platforms (Voicertool, Google Flow, YouTube).
+- `backend/` - Node.js Express server APIs and FFmpeg processing modules.
+- `frontend/` - Static HTML/CSS/JS dashboard deployed on Cloudflare Pages.

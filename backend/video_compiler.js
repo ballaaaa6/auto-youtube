@@ -5,10 +5,10 @@ import path from 'path';
 
 const execPromise = promisify(exec);
 
-// ponytail: ใช้การซอยย่อยวิดีโอเป็นคลิปสั้น ๆ ตามความยาวของแต่ละรูปภาพ แล้วนำมาต่อกันด้วย FFmpeg concat demuxer ซึ่งเขียนง่ายและปลอดภัยกว่าการทำ filter graph ซับซ้อน
+// ponytail: Render simple video chunks from images, then concatenate using concat demuxer for robust execution.
 
 /**
- * สร้างไฟล์คำบรรยาย (SRT) จากรายการประโยคพร้อมข้อมูลช่วงเวลา
+ * Generate standard SRT subtitle format file from Whisper segments.
  */
 export function generateSRT(segments, outputPath) {
   let srtContent = '';
@@ -29,12 +29,12 @@ function formatSRTTime(seconds) {
 }
 
 /**
- * ประกอบไฟล์ภาพและเสียงพูดพร้อมคำบรรยายออกมาเป็นไฟล์วิดีโอ .mp4
- * @param {Array} scenes รายการออบเจ็กต์ [{ start, end, imagePath }]
- * @param {string} audioPath พาธไฟล์เสียงพูดที่ประมวลผลแล้ว
- * @param {string} srtPath พาธไฟล์คำบรรยาย SRT
- * @param {string} outputPath พาธผลลัพธ์ไฟล์วิดีโอสำเร็จรูป
- * @param {string} tempDir โฟลเดอร์สำหรับเก็บไฟล์งานชั่วคราว
+ * Compile images, audio, and subtitle file into a final .mp4 video.
+ * @param {Array} scenes List of [{ start, end, imagePath }]
+ * @param {string} audioPath Processed narration audio path (.mp3)
+ * @param {string} srtPath Subtitle srt file path
+ * @param {string} outputPath Final video output path (.mp4)
+ * @param {string} tempDir Directory for saving temp files
  */
 export async function compileVideo(scenes, audioPath, srtPath, outputPath, tempDir) {
   if (!fs.existsSync(tempDir)) {
@@ -43,40 +43,40 @@ export async function compileVideo(scenes, audioPath, srtPath, outputPath, tempD
 
   const clipPaths = [];
   
-  // 1. เจนคลิปวิดีโอสั้นจากรูปภาพแต่ละรูปตามความยาววินาทีที่กำหนด
+  // 1. Create short video clips from individual images matching section durations
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
     const duration = scene.end - scene.start;
     const clipPath = path.join(tempDir, `clip_${i}.mp4`);
     
-    // คำสั่งสร้างสไลด์จากภาพเดี่ยว ปรับความละเอียดเป็น 1920x1080 (แนวนอน)
+    // Create 1920x1080 slide from single image
     const cmd = `ffmpeg -y -loop 1 -r 25 -i "${scene.imagePath}" -c:v libx264 -t ${duration} -pix_fmt yuv420p -vf "scale=1920:1080,format=yuv420p" "${clipPath}"`;
     await execPromise(cmd);
     clipPaths.push(clipPath);
   }
 
-  // 2. สร้างไฟล์รายการสำหรับรันคำสั่ง concat
+  // 2. Generate file list for FFmpeg concat demuxer
   const listFilePath = path.join(tempDir, 'clips.txt');
   const listContent = clipPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
   fs.writeFileSync(listFilePath, listContent, 'utf-8');
 
-  // 3. นำคลิปทั้งหมดมาต่อกันและรวมเข้ากับแทร็กเสียงพูด
+  // 3. Concat all video clips and merge with narration audio
   const mergedNoSubPath = path.join(tempDir, 'merged_nosub.mp4');
   const mergeCmd = `ffmpeg -y -f concat -safe 0 -i "${listFilePath}" -i "${audioPath}" -c:v copy -c:a aac -shortest "${mergedNoSubPath}"`;
   await execPromise(mergeCmd);
 
-  // 4. ฝังคำบรรยาย (SRT Subtitles) ลงไปในไฟล์วิดีโอตัวสุดท้าย
-  // หมายเหตุ: การใช้ filter subtitles บน Windows ต้องปรับพาธแบบพิเศษ
+  // 4. Burn subtitles (SRT) onto the final video clip
+  // Escaping paths for Windows compatibility in ffmpeg filter expression
   const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
   const renderCmd = `ffmpeg -y -i "${mergedNoSubPath}" -vf "subtitles='${escapedSrtPath}'" -c:a copy "${outputPath}"`;
   await execPromise(renderCmd);
 
-  // 5. เคลียร์ไฟล์คลิปชั่วคราวเพื่อไม่ให้หนักเครื่อง
+  // 5. Clean up temporary chunks
   try {
     clipPaths.forEach(p => fs.unlinkSync(p));
     fs.unlinkSync(listFilePath);
     fs.unlinkSync(mergedNoSubPath);
   } catch (err) {
-    console.warn('ไม่สามารถลบไฟล์ชั่วคราวบางไฟล์ได้:', err.message);
+    console.warn('Failed to clean up some temporary files:', err.message);
   }
 }
