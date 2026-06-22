@@ -6,10 +6,9 @@ dotenv.config();
 
 // Load selectors from docs/SELECTORS.md
 const SELECTORS_PATH = path.join(process.cwd(), '../docs/SELECTORS.md');
-const selectors = JSON.parse(
-  fs.readFileSync(SELECTORS_PATH, 'utf-8')
-    .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1')
-).youtube_studio;
+const content = fs.readFileSync(SELECTORS_PATH, 'utf-8');
+const jsonBlocks = [...content.matchAll(/```json\s*([\s\S]*?)\s*```/g)].map(m => JSON.parse(m[1]));
+const selectors = Object.assign({}, ...jsonBlocks).youtube_studio;
 
 const HEADLESS = process.env.HEADLESS === 'true';
 const PROFILE_PATH = path.resolve(process.env.BROWSER_PROFILE_PATH || '../profiles/user_data');
