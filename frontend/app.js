@@ -13,16 +13,46 @@ const btnUploadYt = document.getElementById('btn-upload-yt');
 const btnDownloadVideo = document.getElementById('btn-download-video');
 
 let generatedVideoPath = ''; // Store absolute path of generated video on local backend
-// Get base URL for backend APIs from URL parameter or localStorage
-function getBackendUrl() {
+let backendUrl = localStorage.getItem('backend_url') || 'http://localhost:3000';
+
+// Fetch the synchronized backend URL from Cloud KV on page load
+async function initializeBackendUrl() {
+  // If there's a backend param in the URL, use it directly (highest priority)
   const urlParams = new URLSearchParams(window.location.search);
   const backendParam = urlParams.get('backend');
   if (backendParam) {
-    const formattedUrl = backendParam.replace(/\/$/, '');
-    localStorage.setItem('backend_url', formattedUrl);
-    return formattedUrl;
+    backendUrl = backendParam.replace(/\/$/, '');
+    localStorage.setItem('backend_url', backendUrl);
+    logToTerminal(`[System] Connected to URL-specified backend: ${backendUrl}`, 'system');
+    return;
   }
-  return localStorage.getItem('backend_url') || 'http://localhost:3000';
+
+  // Otherwise, fetch the latest synced URL from the cloud
+  try {
+    const response = await fetch('https://keyvalue.immanuel.co/api/KeyVal/GetValue/8d5ycaxi/backend_url');
+    if (response.ok) {
+      const hex = await response.json();
+      if (hex) {
+        // Decode Hex to string
+        const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const url = new TextDecoder().decode(bytes);
+        
+        if (url && url.trim().startsWith('http')) {
+          backendUrl = url.trim();
+          logToTerminal(`[System] Connected to cloud-synced backend: ${backendUrl}`, 'system');
+          localStorage.setItem('backend_url', backendUrl);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load cloud backend URL, using cached/default:', err);
+  }
+}
+initializeBackendUrl();
+
+// Get base URL for backend APIs
+function getBackendUrl() {
+  return backendUrl;
 }
 
 // Get the endpoint for script generation

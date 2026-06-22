@@ -238,8 +238,20 @@ app.listen(PORT, () => {
       const tunnelUrl = match[0];
       console.log(`\n==================================================`);
       console.log(`🎉 Cloudflare Tunnel started successfully!`);
+      console.log(`📡 Syncing tunnel URL to Cloud...`);
+      
+      try {
+        const hexVal = Buffer.from(tunnelUrl).toString('hex');
+        await fetch(`https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/8d5ycaxi/backend_url/${hexVal}`, {
+          method: 'POST'
+        });
+        console.log(`🚀 Sync complete! Backend URL stored on Cloud.`);
+      } catch (err) {
+        console.error(`⚠️ Failed to sync backend URL to KV: ${err.message}`);
+      }
+
       console.log(`👉 Open dashboard link:`);
-      console.log(`https://auto-youtube-baj.pages.dev/?backend=${tunnelUrl}`);
+      console.log(`https://auto-youtube-baj.pages.dev/`);
       console.log(`==================================================\n`);
     }
   });
