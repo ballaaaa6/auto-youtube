@@ -13,30 +13,25 @@ const btnUploadYt = document.getElementById('btn-upload-yt');
 const btnDownloadVideo = document.getElementById('btn-download-video');
 
 let generatedVideoPath = ''; // Store absolute path of generated video on local backend
-let backendUrl = localStorage.getItem('backend_url') || 'http://localhost:3000';
-
-// Fetch the synchronized backend URL from Cloud KV on page load
-async function initializeBackendUrl() {
-  try {
-    const response = await fetch('https://jsonblob.com/api/jsonBlob/019eeed8-b906-7c27-ae66-62e1fcb6808c');
-    if (response.ok) {
-      const data = await response.json();
-      const url = data.backend_url;
-      if (url && url.trim().startsWith('http')) {
-        backendUrl = url.trim();
-        logToTerminal(`[System] Connected to cloud-synced backend: ${backendUrl}`, 'system');
-        localStorage.setItem('backend_url', backendUrl);
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to load cloud backend URL, using cached/default:', err);
-  }
-}
-initializeBackendUrl();
-
-// Get base URL for backend APIs
+// Get base URL for backend APIs from URL parameter or localStorage
 function getBackendUrl() {
-  return backendUrl;
+  const urlParams = new URLSearchParams(window.location.search);
+  const backendParam = urlParams.get('backend');
+  if (backendParam) {
+    const formattedUrl = backendParam.replace(/\/$/, '');
+    localStorage.setItem('backend_url', formattedUrl);
+    return formattedUrl;
+  }
+  return localStorage.getItem('backend_url') || 'http://localhost:3000';
+}
+
+// Get the endpoint for script generation
+function getScriptGenUrl() {
+  // If running on the deployed Cloudflare Pages site, use relative path to hit serverless Pages Functions
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && !window.location.protocol.startsWith('file')) {
+    return '/api/generate-script';
+  }
+  return `${getBackendUrl()}/api/generate-script`;
 }
 
 // Append new message line in terminal logger
@@ -60,7 +55,7 @@ btnGenerateScript.addEventListener('click', async () => {
   logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
   
   try {
-    const response = await fetch(`${getBackendUrl()}/api/generate-script`, {
+    const response = await fetch(getScriptGenUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic })

@@ -238,21 +238,8 @@ app.listen(PORT, () => {
       const tunnelUrl = match[0];
       console.log(`\n==================================================`);
       console.log(`🎉 Cloudflare Tunnel started successfully!`);
-      console.log(`📡 Syncing tunnel URL to Cloud...`);
-      
-      try {
-        await fetch('https://jsonblob.com/api/jsonBlob/019eeed8-b906-7c27-ae66-62e1fcb6808c', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ backend_url: tunnelUrl })
-        });
-        console.log(`🚀 Sync complete! Backend URL stored on Cloud.`);
-      } catch (err) {
-        console.error(`⚠️ Failed to sync backend URL to KV: ${err.message}`);
-      }
-
       console.log(`👉 Open dashboard link:`);
-      console.log(`https://auto-youtube-baj.pages.dev`);
+      console.log(`https://auto-youtube-baj.pages.dev/?backend=${tunnelUrl}`);
       console.log(`==================================================\n`);
     }
   });
