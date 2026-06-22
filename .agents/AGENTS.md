@@ -27,3 +27,11 @@
    - การทำงานที่ใช้เวลานาน (เช่น บอทกำลังกดสร้างเสียง เจนภาพ หรือรัน FFmpeg) จะต้องส่ง Log สถานะแบบละเอียดและเรียลไทม์ผ่าน **Server-Sent Events (SSE)** กลับไปแสดงผลที่หน้าจอ Dashboard เสมอ
 3. **การทำงานแบบ Headless / Headful**:
    - สคริปต์บอท Playwright จะต้องรองรับการสลับโหมด `headless: true/false` ผ่านตัวแปรสภาพแวดล้อม (Environment Variables) หรือออปชันจากหน้าบ้าน
+
+---
+
+## 3. กฎการอัปเดตและ Deploy อัตโนมัติ (CI/CD Rule)
+
+1. **บังคับทำการ Commit และ Push ทุกครั้งหลังแก้โค้ด**:
+   - ทุกครั้งที่มีการแก้ไข เพิ่ม หรือลบไฟล์โค้ดในโปรเจกต์นี้ AI Agent **ต้องสั่งรันคำสั่ง Git Add, Commit และ Push (ไปที่รีโมท `origin main`) ทันที** เพื่อรองรับระบบ Auto Deploy บน Cloudflare Pages ของผู้ใช้
+   - ในประวัติการบันทึก (Commit Message) ให้สรุปสั้น ๆ ว่าแก้ไขอะไรสไตล์ Lazy Senior Dev เช่น `git commit -m "fix: adjust select elements in voicertool tts"`
