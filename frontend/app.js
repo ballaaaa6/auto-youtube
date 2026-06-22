@@ -27,10 +27,6 @@ function getBackendUrl() {
 
 // Get the endpoint for script generation
 function getScriptGenUrl() {
-  // If running on the deployed Cloudflare Pages site, use relative path to hit serverless Pages Functions
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && !window.location.protocol.startsWith('file')) {
-    return '/api/generate-script';
-  }
   return `${getBackendUrl()}/api/generate-script`;
 }
 
@@ -54,20 +50,11 @@ btnGenerateScript.addEventListener('click', async () => {
   btnGenerateScript.disabled = true;
   logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
   try {
-    let response = await fetch(getScriptGenUrl(), {
+    const response = await fetch(getScriptGenUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic })
     });
-
-    if (!response.ok && getScriptGenUrl() === '/api/generate-script') {
-      logToTerminal('[System] Serverless AI endpoint unavailable. Falling back to local backend...', 'system');
-      response = await fetch(`${getBackendUrl()}/api/generate-script`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic })
-      });
-    }
 
     if (!response.ok) {
       const err = await response.json();
