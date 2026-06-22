@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto YouTube Console - แดชบอร์ดคุมบอทสร้างช่องอัตโนมัติ</title>
+  <!-- โหลด Font หรูหราและไอคอนตามหลัก SEO และ UX -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div>
+        <h1 id="main-title">🤖 Auto YouTube Studio</h1>
+        <p class="subtitle">ระบบคุมเบราว์เซอร์อัตโนมัติ เจนสคริปต์ ทำเสียงพากย์ ต่อภาพ และอัปโหลดขึ้น YouTube</p>
+      </div>
+      <div class="config-bar">
+        <label for="backend-url">ที่อยู่หลังบ้าน (Backend):</label>
+        <input type="text" id="backend-url" value="http://localhost:3000" placeholder="กรอก URL เซิร์ฟเวอร์หรือ CF Tunnel">
+      </div>
+    </header>
+
+    <div class="main-grid">
+      
+      <!-- ส่วนควบคุมและหน้าเขียนบท (ซีกซ้าย) -->
+      <div class="editor-container">
+        
+        <!-- ส่วนที่ 1: สั่งไอเดียเขียนบทด้วย AI -->
+        <div class="card">
+          <div class="card-title">📝 1. กำหนดหัวข้อและโครงสร้างเนื้อหา</div>
+          <div class="form-group">
+            <label for="topic-input">หัวข้อคลิปที่ต้องการ (Topic):</label>
+            <input type="text" id="topic-input" placeholder="เช่น 5 เรื่องลึกลับใต้ก้นมหาสมุทรที่นักวิทยาศาสตร์ยังหาคำตอบไม่ได้" value="5 เรื่องลึกลับใต้ก้นมหาสมุทร">
+          </div>
+          <button id="btn-generate-script" class="btn">✨ สั่ง AI เขียนบทพูดและวิเคราะห์ภาพ</button>
+        </div>
+
+        <!-- ส่วนที่ 2: กล่องตรวจสอบและแก้ไขบท (JSON Editor) -->
+        <div class="card">
+          <div class="card-title">⚙️ 2. ตรวจสอบบทพูดและ Prompt เจนภาพ</div>
+          <p class="subtitle" style="margin-top: -0.75rem;">คุณสามารถตรวจสอบ แก้ไขบทพูด หรือปรับเปลี่ยนคำสั่งสั่งวาดภาพของแต่ละท่อนได้ตรงนี้ก่อนส่งรันบอท</p>
+          <div class="form-group">
+            <textarea id="script-editor" class="editor-textarea" placeholder="บทพูดและ Prompt เจนภาพจะแสดงที่นี่หลังจากรันขั้นแรกเสร็จ..."></textarea>
+          </div>
+          <button id="btn-run-pipeline" class="btn btn-success" disabled>🚀 เริ่มรันบอทอัตโนมัติ (TTS -> เจนภาพ -> รวมคลิป)</button>
+        </div>
+
+      </div>
+
+      <!-- ส่วนรายงาน Logs และห้องเรนเดอร์ (ซีกขวา) -->
+      <div class="editor-container">
+        
+        <!-- ส่วนที่ 3: หน้าต่างคอยดูการล็อกอินและรายงานสถานะบอท (Real-time logs) -->
+        <div class="card">
+          <div class="card-title">💻 3. หน้าจอสถานะบอท (Live Terminal Logs)</div>
+          <div class="progress-bar-container" id="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+          <div class="terminal" id="terminal-logs">
+            <div class="log-line system">[ระบบ] หน้าควบคุมพร้อมใช้งาน กรุณากรอกหัวข้อคลิปทางด้านซ้ายเพื่อเริ่มต้น...</div>
+          </div>
+        </div>
+
+        <!-- ส่วนที่ 4: ห้องทดลองเปิดเล่นคลิปและส่งเข้า YouTube -->
+        <div class="card">
+          <div class="card-title">🎬 4. ตรวจสอบคลิปวิดีโอและเผยแพร่</div>
+          <div class="video-preview">
+            <video id="video-player" controls>
+              <source src="" type="video/mp4">
+              เบราว์เซอร์ของคุณไม่รองรับการเปิดเล่นวิดีโอ
+            </video>
+          </div>
+          
+          <div class="form-group">
+            <label for="yt-title">ชื่อคลิปวิดีโอสำหรับอัปโหลด:</label>
+            <input type="text" id="yt-title" placeholder="กรอกชื่อคลิปวิดีโอ">
+          </div>
+          
+          <div class="form-group">
+            <label for="yt-desc">รายละเอียดใต้คลิป (Description):</label>
+            <textarea id="yt-desc" placeholder="กรอกคำอธิบายและแท็กสำหรับคลิปนี้" style="min-height: 80px;"></textarea>
+          </div>
+
+          <div style="display: flex; gap: 1rem;">
+            <button id="btn-upload-yt" class="btn" style="flex: 1; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);" disabled>🔺 อัปโหลดขึ้น YouTube Studio</button>
+            <a id="btn-download-video" class="btn btn-secondary" style="display: none;" download>💾 โหลดลงเครื่อง</a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

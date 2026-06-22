@@ -1,0 +1,3 @@
+[submodule ".agents/ponytail"]
+	path = .agents/ponytail
+	url = https://github.com/DietrichGebert/ponytail
