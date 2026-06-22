@@ -53,13 +53,21 @@ btnGenerateScript.addEventListener('click', async () => {
 
   btnGenerateScript.disabled = true;
   logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
-  
   try {
-    const response = await fetch(getScriptGenUrl(), {
+    let response = await fetch(getScriptGenUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic })
     });
+
+    if (!response.ok && getScriptGenUrl() === '/api/generate-script') {
+      logToTerminal('[System] Serverless AI endpoint unavailable. Falling back to local backend...', 'system');
+      response = await fetch(`${getBackendUrl()}/api/generate-script`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      });
+    }
 
     if (!response.ok) {
       const err = await response.json();
