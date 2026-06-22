@@ -18,9 +18,10 @@ let backendUrl = localStorage.getItem('backend_url') || 'http://localhost:3000';
 // Fetch the synchronized backend URL from Cloud KV on page load
 async function initializeBackendUrl() {
   try {
-    const response = await fetch('https://kvdb.io/auto_youtube_deca8bd010fec938/backend_url');
+    const response = await fetch('https://jsonblob.com/api/jsonBlob/019eeed8-b906-7c27-ae66-62e1fcb6808c');
     if (response.ok) {
-      const url = await response.text();
+      const data = await response.json();
+      const url = data.backend_url;
       if (url && url.trim().startsWith('http')) {
         backendUrl = url.trim();
         logToTerminal(`[System] Connected to cloud-synced backend: ${backendUrl}`, 'system');

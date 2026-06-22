@@ -241,9 +241,10 @@ app.listen(PORT, () => {
       console.log(`📡 Syncing tunnel URL to Cloud...`);
       
       try {
-        await fetch('https://kvdb.io/auto_youtube_deca8bd010fec938/backend_url', {
-          method: 'POST',
-          body: tunnelUrl
+        await fetch('https://jsonblob.com/api/jsonBlob/019eeed8-b906-7c27-ae66-62e1fcb6808c', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backend_url: tunnelUrl })
         });
         console.log(`🚀 Sync complete! Backend URL stored on Cloud.`);
       } catch (err) {
