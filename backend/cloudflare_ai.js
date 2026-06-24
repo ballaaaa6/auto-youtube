@@ -39,13 +39,7 @@ export async function generateOutline(topic) {
 Generate a structured storyline outline in Thai for the topic: "${topic}".
 Create exactly 8 to 10 narrative chapters/sections. Keep them logically connected.
 
-Return ONLY a JSON array of strings containing the chapter names/themes. Do not write any conversational text or formatting outside the JSON array.
-Example output format:
-[
-  "บทนำ: จุดเริ่มต้นของ...",
-  "บทที่ 2: ความลึกลับที่ซ่อนอยู่...",
-  "บทสรุป: สิ่งที่เราค้นพบ..."
-]`;
+**STRICT OUTPUT FORMAT:** You must return ONLY a valid JSON array of strings. Do not include any introductory text, explanations, markdown formatting, or conversational filler outside the JSON structure. The output MUST be parsable as JSON immediately.`;
 
   const result = await runModel('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
@@ -85,7 +79,7 @@ Current Section Title: "${sectionTitle}" (Section ${index} of ${total})
 
 Write a detailed, engaging narration spoken in Thai (around 150-250 words) for this section.
 Use a professional, dramatic, and intriguing storytelling tone.
-Write only the spoken narration text. Do not include section headings, narrator cues, bracketed text, or punctuation marks like asterisks. Return purely the spoken Thai text.`;
+**STRICT OUTPUT:** Your response MUST contain ONLY the raw, continuous Thai script text. Do not include any markdown formatting (such as code fences), headings, cues, or explanatory notes whatsoever.`;
 
   const result = await runModel('@cf/meta/llama-3.1-8b-instruct', {
     messages: [
@@ -94,7 +88,14 @@ Write only the spoken narration text. Do not include section headings, narrator 
     ],
   });
 
-  return (result.result.response || result.result.text).trim();
+  let narration = (result.result.response || result.result.text).trim();
+  if (!narration) {
+    console.warn(`[Script Gen] Warning: Received empty or null narration for section ${index}. Using fallback text.`);
+    return `(เนื้อหาสำหรับส่วนนี้ยังไม่พร้อมใช้งาน กรุณาตรวจสอบ API หรือลองใหม่อีกครั้ง)`;
+  }
+  // Basic cleanup to remove potential markdown wrappers if the model fails its constraint.
+  narration = narration.replace(/```[\s\S]*?```/g, '').trim();
+  return narration;
 }
 
 /**
