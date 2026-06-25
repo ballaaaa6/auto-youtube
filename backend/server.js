@@ -13,6 +13,8 @@ import {
   generateImagePromptsForSegments,
   deriveStoryboardShape,
   summarizeForNextSection,
+  updateFreshnessMemory,
+  maybePolishScript,
 } from './cloudflare_ai.js';
 import { runTTS } from './automations/voicertool_tts.js';
 import { mergeAudio, trimSilence } from './audio_processor.js';
@@ -80,8 +82,14 @@ app.post('/api/generate-script', async (req, res) => {
     const { wordsPerSection } = deriveStoryboardShape(durationMinutes);
     const narrationOptions = { language, tone, tier, wordsPerSection };
 
-    const script = [];
+    let script = [];
     let previousSummary = null;
+    let freshnessMemory = {
+      previousOpeningMove: null,
+      previousEndingMove: null,
+      recentOpeningLines: [],
+      recentEndingLines: [],
+    };
 
     for (let i = 0; i < outline.length; i++) {
       const section = outline[i];
@@ -93,16 +101,28 @@ app.post('/api/generate-script', async (req, res) => {
         i + 1,
         outline.length,
         previousSummary,
-        narrationOptions
+        { ...narrationOptions, freshnessMemory }
       );
 
       script.push({
         sectionTitle: section.sectionTitle,
+        hookOrGoal: section.hookOrGoal,
+        keyPoint: section.keyPoint,
         narration: narration
       });
 
+      freshnessMemory = updateFreshnessMemory(freshnessMemory, narration);
       previousSummary = summarizeForNextSection(narration);
     }
+
+    console.log(`[Script Gen] Narration generated. Polishing script (polishScript=${req.body.polishScript !== false})...`);
+    script = await maybePolishScript(topic, script, {
+      language,
+      tone,
+      durationMinutes,
+      tier,
+      polishScript: req.body.polishScript !== false
+    });
 
     res.json({ script });
   } catch (err) {

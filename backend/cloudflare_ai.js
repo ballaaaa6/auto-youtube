@@ -60,8 +60,8 @@ function deriveStoryboardShape(durationMinutes) {
 }
 
 const LANGUAGE_LABELS = {
-  auto: 'ภาษาไทย',
-  thai: 'ภาษาไทย',
+  auto: 'Thai',
+  thai: 'Thai',
   english: 'English',
   arabic: 'Arabic',
   chinese_simplified: 'Simplified Chinese',
@@ -71,7 +71,7 @@ const LANGUAGE_LABELS = {
   hindi: 'Hindi',
   indonesian: 'Indonesian',
   italian: 'Italian',
-  japanese: '日本語 (Japanese)',
+  japanese: 'Japanese',
   korean: 'Korean',
   malay: 'Malay',
   portuguese: 'Portuguese',
@@ -82,46 +82,207 @@ const LANGUAGE_LABELS = {
 };
 
 const TONE_LABELS = {
-  documentary: 'สารคดีหรู (cinematic, polished documentary tone)',
-  mystery: 'ลึกลับชวนสงสัย (mysterious, suspenseful)',
-  fun: 'ตลกสนุก (lighthearted and entertaining)',
-  casual: 'ให้ความรู้เป็นกันเอง (friendly, casual explainer)',
-  thriller: 'ระทึกขย้ำ (tense, thriller-style)',
-  dramatic: 'ดราม่าเข้มข้น (emotionally charged dramatic storytelling)',
-  inspirational: 'สร้างแรงบันดาลใจ (uplifting and motivational)',
-  dark: 'หม่นลึกกดดัน (dark, heavy, and unsettling)',
-  epic: 'ยิ่งใหญ่อลังการ (epic, grand-scale cinematic tone)',
-  satirical: 'ประชดคมๆ (sharp, witty, satirical delivery)',
-  urgent: 'เร่งด่วนตื่นตัว (urgent, high-stakes pacing)',
-  emotional: 'อารมณ์จัดเต็ม (deeply emotional and immersive)',
-  luxury: 'หรูหราไฮเอนด์ (premium, elegant, luxurious)',
-  analytical: 'วิเคราะห์คมชัด (precise, analytical, insight-driven)',
-  storytelling: 'เล่าเรื่องลื่นไหล (smooth narrative storyteller tone)',
-  news: 'ข่าวจริงจัง (authoritative news-style reporting)',
-  horror: 'สยองขวัญชวนหลอน (creepy, eerie horror tone)',
+  documentary: 'Premium cinematic documentary tone — polished, authoritative narration',
+  mystery: 'Mysterious and suspenseful — withhold information, build curiosity',
+  fun: 'Lighthearted and entertaining — playful energy, quick wit',
+  casual: 'Friendly casual explainer — like a knowledgeable friend chatting, not a lecturer',
+  thriller: 'Tense thriller pacing — short clipped sentences, mounting pressure',
+  dramatic: 'Emotionally charged dramatic storytelling — high stakes, vivid human stakes',
+  inspirational: 'Uplifting and motivational — focus on triumph and meaning',
+  dark: 'Dark, heavy, unsettling atmosphere — weight in every sentence',
+  epic: 'Epic, grand-scale cinematic tone — sweeping scope, larger-than-life framing',
+  satirical: 'Sharp witty satirical delivery — pointed irony, knowing tone',
+  urgent: 'Urgent, high-stakes pacing — clock-is-ticking energy',
+  emotional: 'Deeply emotional and immersive — sit inside the feeling, do not rush past it',
+  luxury: 'Premium, elegant, luxurious framing — refined vocabulary, unhurried pace',
+  analytical: 'Precise, analytical, insight-driven — sharp logic, clear cause-and-effect',
+  storytelling: 'Smooth narrative storyteller tone — natural flow, no info-dumping',
+  news: 'Authoritative news-style reporting — credible, measured, fact-forward',
+  horror: 'Creepy, eerie horror tone — dread that builds quietly before it strikes',
 };
 
 const ANGLE_LABELS = {
-  mystery: 'ปริศนาลึกลับ (unsolved mystery framing)',
-  science: 'ไขความจริงทางวิทยาศาสตร์ (science explainer framing)',
-  toplist: 'Top List (countdown/list framing)',
-  history: 'ประวัติศาสตร์เล่าเรื่อง (historical storytelling framing)',
-  conspiracy: 'ทฤษฎีสมคบคิด (conspiracy investigation framing)',
-  mythology: 'ตำนานและความเชื่อ (mythology and belief-system framing)',
-  crime: 'คดีจริงและการสืบสวน (true crime investigative framing)',
-  survival: 'เอาตัวรอดและสถานการณ์สุดขีด (survival and extreme-situation framing)',
-  biography: 'ชีวประวัติบุคคลน่าสนใจ (biographical storytelling framing)',
-  technology: 'เทคโนโลยีและอนาคต (technology and future-trends framing)',
-  business: 'ธุรกิจ กลยุทธ์ และอำนาจ (business strategy and power dynamics framing)',
-  psychology: 'จิตวิทยาและพฤติกรรมมนุษย์ (psychology and human-behavior framing)',
-  geopolitics: 'ภูมิรัฐศาสตร์และเกมอำนาจ (geopolitics and power-balance framing)',
-  disaster: 'ภัยพิบัติและเหตุการณ์ใหญ่ (disaster breakdown framing)',
-  war: 'สงครามและยุทธศาสตร์ (warfare and strategy framing)',
-  ancient_civilization: 'อารยธรรมโบราณ (ancient civilization exploration framing)',
-  paranormal: 'เหนือธรรมชาติ (paranormal investigation framing)',
-  social_issue: 'ประเด็นสังคมชวนคิด (social issue analysis framing)',
-  finance: 'การเงินและเศรษฐกิจ (finance and macroeconomics framing)',
+  mystery: 'Unsolved mystery framing — frame everything around an unanswered question',
+  science: 'Science explainer framing — demystify mechanisms step by step',
+  toplist: 'Top List / countdown framing',
+  history: 'Historical storytelling framing — follow cause and consequence through time',
+  conspiracy: 'Conspiracy investigation framing — follow the thread of suspicion',
+  mythology: 'Mythology and belief-system framing',
+  crime: 'True crime investigative framing — evidence-led, procedural tension',
+  survival: 'Survival and extreme-situation framing — visceral, moment-to-moment stakes',
+  biography: 'Biographical storytelling framing — a life told through pivotal turns',
+  technology: 'Technology and future-trends framing',
+  business: 'Business strategy and power-dynamics framing',
+  psychology: 'Psychology and human-behavior framing',
+  geopolitics: 'Geopolitics and power-balance framing',
+  disaster: 'Disaster breakdown framing — sequence of events, human impact',
+  war: 'Warfare and strategy framing',
+  ancient_civilization: 'Ancient civilization exploration framing',
+  paranormal: 'Paranormal investigation framing',
+  social_issue: 'Social issue analysis framing — human consequence first, data second',
+  finance: 'Finance and macroeconomics framing',
 };
+
+/**
+ * Deterministically assign each section a structural role based on its
+ * position in the video's retention curve.
+ */
+function deriveArcRole(index, total) {
+  if (index === 1) return 'hook';
+  if (index === total) return 'resolution';
+  if (total >= 4 && index === total - 1) return 'climax';
+
+  if (total >= 5) {
+    const midpoint = Math.round(total / 2);
+    if (index === midpoint) return 'midpoint_turn';
+  }
+
+  return 'rising_stakes';
+}
+
+const ARC_ROLE_GUIDANCE = {
+  hook: {
+    label: 'HOOK (cold open)',
+    outline:
+      'This section must hook the viewer in the first lines. State the central question, tension, or promise of the entire video. Do not give away the answer yet.',
+    narration:
+      'This is the cold open. The first 2-3 sentences are the most important sentences in the whole script. Open with impact. Make the central promise of the video clear without revealing the answer.',
+  },
+
+  rising_stakes: {
+    label: 'RISING STAKES',
+    outline:
+      'This section must escalate from the previous one with new information, a deeper layer, a bigger consequence, or a sharper contradiction. It must move the story forward.',
+    narration:
+      'Escalate from where the previous section ended. Add genuinely new information or a deeper layer. Do not restate the same idea in different words.',
+  },
+
+  midpoint_turn: {
+    label: 'MIDPOINT TURN (retention save point)',
+    outline:
+      'This is the retention-critical midpoint. It must contain a twist, reveal, contradiction, or escalation strong enough to re-hook a viewer who is about to leave.',
+    narration:
+      'This is the retention-critical midpoint. Do not ease into it. The first sentence should create a pattern interrupt: a twist, reveal, contradiction, or sharp escalation.',
+  },
+
+  climax: {
+    label: 'CLIMAX',
+    outline:
+      'This is the peak of the video. The keyPoint should be the most intense, consequential, surprising, or emotionally loaded point in the whole story.',
+    narration:
+      'This is the peak moment. Use the tightest pacing and strongest pressure of the whole script. This is the best place for a direct viewer-facing beat.',
+  },
+
+  resolution: {
+    label: 'RESOLUTION (ending)',
+    outline:
+      'This is the final section. The hookOrGoal must be a resonant closing payoff, not a dangling question. It should answer, sharpen, or meaningfully reframe the promise made in the hook.',
+    narration:
+      'This is the ending. Do not finish with a generic summary. Deliver a satisfying payoff or one sharp final thought that lingers after the video ends.',
+  },
+};
+
+function buildArcRoleMapBlock(sectionCount) {
+  const lines = [];
+  for (let i = 1; i <= sectionCount; i += 1) {
+    const role = deriveArcRole(i, sectionCount);
+    const guidance = ARC_ROLE_GUIDANCE[role];
+    lines.push(`Section ${i} — ${guidance.label}: ${guidance.outline}`);
+  }
+  return lines.join('\n');
+}
+
+function getFirstNonEmptyLine(text = '') {
+  return String(text)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean) || '';
+}
+
+function getLastNonEmptyLine(text = '') {
+  const lines = String(text)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.length ? lines[lines.length - 1] : '';
+}
+
+function detectOpeningMove(line = '') {
+  const trimmed = String(line).trim();
+
+  if (!trimmed) return 'unknown';
+  if (/[?？]$/i.test(trimmed) || /(ไหม|หรือเปล่า|หรือไม่|อย่างไร|กันแน่|ใช่ไหม|หรือยัง|ได้อย่างไร|อย่างไรกันแน่)$/.test(trimmed)) return 'direct_question';
+  
+  if (/^(imagine|picture|suppose|pretend|what\s+if|you\s+are|you\s+wake\s+up|you\s+stand|you\s+walk)\b/i.test(trimmed) ||
+      /^(จินตนาการ|ลองนึก|สมมุติ|สมมติ|คิดดูว่า|จะเกิดอะไรขึ้นถ้า|ถ้าหาก|คุณตื่นขึ้นมา|คุณยืนอยู่|คุณเดิน|ลองจินตนาการ)/i.test(trimmed)) {
+    return 'viewer_scenario';
+  }
+  
+  if (/[\d๐-๙]|percent|million|billion|trillion|dead|missing|collapsed|vanished|killed|lost|found/i.test(trimmed) ||
+      /(เปอร์เซ็นต์|%|ล้าน|พันล้าน|แสนล้าน|ล้านล้าน|ตาย|เสียชีวิต|ศพ|หายสาบสูญ|สูญหาย|พังทลาย|ถล่ม|ยุบ|หายไป|ฆ่า|พบ|เจอ|ค้นพบ)/i.test(trimmed)) {
+    return 'jarring_fact';
+  }
+
+  return 'statement';
+}
+
+function detectEndingMove(line = '') {
+  const trimmed = String(line).trim();
+
+  if (!trimmed) return 'unknown';
+  if (/[?？]$/i.test(trimmed) || /(ไหม|หรือเปล่า|หรือไม่|อย่างไร|กันแน่|ใช่ไหม|หรือยัง|ได้อย่างไร|อย่างไรกันแน่)$/.test(trimmed)) return 'hanging_question';
+  if (/\.\.\.$/.test(trimmed)) return 'unresolved_consequence';
+  if (trimmed.length <= 80) return 'blunt_stop';
+
+  return 'consequence_statement';
+}
+
+function updateFreshnessMemory(memory, narration) {
+  const firstLine = getFirstNonEmptyLine(narration);
+  const lastLine = getLastNonEmptyLine(narration);
+
+  const nextMemory = {
+    previousOpeningMove: detectOpeningMove(firstLine),
+    previousEndingMove: detectEndingMove(lastLine),
+    recentOpeningLines: [...(memory?.recentOpeningLines || []), firstLine].filter(Boolean).slice(-4),
+    recentEndingLines: [...(memory?.recentEndingLines || []), lastLine].filter(Boolean).slice(-4),
+  };
+
+  return nextMemory;
+}
+
+function buildFreshnessMemoryBlock(memory = {}) {
+  const openingLines = (memory.recentOpeningLines || [])
+    .filter(Boolean)
+    .map((line) => `- "${line}"`)
+    .join('\n');
+
+  const endingLines = (memory.recentEndingLines || [])
+    .filter(Boolean)
+    .map((line) => `- "${line}"`)
+    .join('\n');
+
+  const previousOpeningMove = memory.previousOpeningMove || 'none';
+  const previousEndingMove = memory.previousEndingMove || 'none';
+
+  return `CREATIVE FRESHNESS MEMORY:
+- Previous opening move: ${previousOpeningMove}
+- Previous ending move: ${previousEndingMove}
+- Avoid repeating the same opening move back-to-back unless the section role absolutely requires it.
+- Avoid repeating the same ending move back-to-back unless the section role absolutely requires it.
+- Do not reuse or closely imitate these recent opening lines:
+${openingLines || '- None yet'}
+- Do not reuse or closely imitate these recent ending lines:
+${endingLines || '- None yet'}
+
+FRESHNESS CONTRACT:
+- The rules define structure, not wording.
+- Do not reuse stock phrases, generic YouTube hook lines, or repeated sentence patterns.
+- Invent fresh phrasing, fresh imagery, fresh transitions, and fresh comparisons for this specific topic.
+- Never make two sections feel like they came from the same template.
+- Do not force direct-address phrases such as "here is the thing" or "think about it" literally. Use natural equivalents in the selected output language.`;
+}
 
 /**
  * Qwen3 (the standard-tier model) is a reasoning model that emits a
@@ -215,6 +376,325 @@ function parseJsonArray(raw) {
   throw new Error('AI output was not valid JSON');
 }
 
+function buildOutlinePrompt(topic, { durationMinutes, language, tone, angle }) {
+  const { sectionCount } = deriveStoryboardShape(durationMinutes);
+
+  const outputLanguage = LANGUAGE_LABELS[language] || 'Thai';
+
+  const toneInstruction = TONE_LABELS[tone]
+    ? TONE_LABELS[tone]
+    : 'Choose the storytelling tone that best fits this topic, then hold that tone consistently across the whole outline.';
+
+  const angleInstruction = ANGLE_LABELS[angle]
+    ? ANGLE_LABELS[angle]
+    : 'Choose the content angle or framing that best fits this topic on your own.';
+
+  const arcRoleMapBlock = buildArcRoleMapBlock(sectionCount);
+
+  return `You are a professional YouTube scriptwriter specializing in documentary and educational storytelling.
+
+Your job is not to write a flat encyclopedia recap.
+Your job is to build a story engine that keeps viewers watching.
+
+TOPIC: "${topic}"
+
+OUTPUT LANGUAGE FOR ALL TEXT FIELDS: ${outputLanguage}
+Write sectionTitle, hookOrGoal, and keyPoint entirely in this language.
+Use natural, idiomatic phrasing.
+Never write a stiff literal translation.
+
+TONE: ${toneInstruction}
+
+CONTENT ANGLE: ${angleInstruction}
+
+INTERNAL STORY SPINE:
+Before writing the JSON, silently decide:
+- the central promise of the video
+- the central tension or contradiction
+- the emotional or intellectual payoff at the end
+
+Do not output the story spine separately.
+Use it to make every section feel connected.
+
+Build a storyboard of exactly ${sectionCount} sections.
+
+This video follows a retention-curve structure.
+Each section below has a specific job based on its position:
+
+${arcRoleMapBlock}
+
+Each section must have:
+1. "sectionTitle": a short title for that section
+2. "hookOrGoal": the open question, reveal, twist, consequence, or payoff this section delivers
+3. "keyPoint": the one core point this section must land clearly
+
+STRUCTURAL RULES:
+- Section 1 must create immediate curiosity and state the central promise of the video.
+- The midpoint_turn section must create a real pattern interrupt, not just another fact.
+- The climax section must carry the highest stakes, strongest surprise, or deepest emotional weight.
+- The final section must create a real payoff, not a generic summary.
+- Each section must connect causally to the section before and after it.
+- No two sections may cover the same core point.
+- Do not create independent mini-articles.
+- Do not list facts in chronological order unless chronology is the actual source of tension.
+- Vary how hookOrGoal creates pull across sections.
+- Do not use the same hook mechanic for every section.
+- Do not rely on stock YouTube phrasing.
+- The rules define structure, not wording. Invent fresh phrasing for this specific topic.
+
+STRICT OUTPUT FORMAT:
+Return a JSON array only.
+No explanation.
+No markdown fences.
+No text outside the JSON.
+
+Format:
+[
+  {"sectionTitle": "...", "hookOrGoal": "...", "keyPoint": "..."}
+]`;
+}
+
+function buildNarrationPrompt(
+  topic,
+  section,
+  index,
+  total,
+  previousSummary,
+  { language, tone, wordsPerSection, freshnessMemory }
+) {
+  const outputLanguage = LANGUAGE_LABELS[language] || 'Thai';
+
+  const toneInstruction = TONE_LABELS[tone]
+    ? TONE_LABELS[tone]
+    : 'Choose whatever tone best fits this specific section while staying consistent with the whole script.';
+
+  const contextBlock = previousSummary
+    ? `The previous section ended on: "${previousSummary}"\nContinue directly from that point. Do not recap or repeat what was already said.`
+    : 'This is the first section of the video. It must hook the viewer in the opening seconds.';
+
+  const arcRole = deriveArcRole(index, total);
+  const arcGuidance = ARC_ROLE_GUIDANCE[arcRole];
+  const freshnessBlock = buildFreshnessMemoryBlock(freshnessMemory);
+
+  return `You are a professional YouTube scriptwriter and documentary narrator.
+
+Write like a sharp storyteller speaking to one real person.
+Do not sound like an academic report.
+Do not sound like a generic AI summary.
+Do not sound like a list of facts.
+
+OVERALL TOPIC: "${topic}"
+
+OUTPUT LANGUAGE: ${outputLanguage}
+Write the narration entirely in this language.
+Use natural, idiomatic spoken phrasing.
+Never write a stiff literal translation.
+
+TONE FOR THIS SCRIPT: ${toneInstruction}
+
+SECTION ${index} of ${total}
+STRUCTURAL ROLE: ${arcGuidance.label}
+
+ROLE-SPECIFIC JOB:
+${arcGuidance.narration}
+
+SECTION TITLE:
+"${section.sectionTitle}"
+
+CORE POINT THIS SECTION MUST LAND:
+${section.keyPoint}
+
+WHAT THIS SECTION MUST LEAVE THE VIEWER WANTING:
+${section.hookOrGoal}
+
+CONTINUITY:
+${contextBlock}
+
+${freshnessBlock}
+
+Write approximately ${wordsPerSection} words.
+
+NARRATIVE ENGINE RULES:
+These rules are mandatory for every section.
+Tone changes mood and vocabulary.
+Structural role changes the job of this section.
+Neither one overrides these baseline rules.
+
+1. OPENING
+Open with exactly one strong move that fits this section:
+- a direct viewer-facing question
+- a role-play scenario that puts the viewer inside the moment
+- a short, jarring fact or contradiction in one tight sentence
+- a sharp continuation from the previous section if the section must flow directly
+
+Do not use the same opening move as the previous section unless the structural role requires it.
+
+2. DIRECT VIEWER CONNECTION
+Somewhere in the body, include one natural viewer-facing beat.
+Do not force a fixed phrase.
+It should feel like a real narrator briefly leaning toward the viewer.
+
+3. CONCRETE IMAGERY
+Avoid floating abstractions.
+Do not stack abstract nouns.
+Turn abstract ideas into visible scenes, human choices, physical details, pressure, cost, risk, or consequence.
+
+4. SECTION ENDING VARIATION
+Do not end every section the same way.
+Use the ending that best fits the role:
+- a hanging question
+- an unresolved consequence
+- a blunt stop
+- a quiet image
+- a payoff line
+
+Avoid repeating the previous ending move back-to-back.
+For the resolution role, end with a strong final payoff instead of a dangling question.
+
+5. RHYTHM
+Write for spoken narration.
+Use short sentences.
+Use real pauses.
+Avoid long essay-style sentences.
+Do not over-explain the hook before it lands.
+
+6. STORY MOVEMENT
+Every section must move the story forward.
+Do not repeat the same point in different words.
+Do not fill space with generic background.
+Do not write a neutral summary when the section needs tension, surprise, pressure, or payoff.
+
+7. FRESHNESS
+The rules define structure, not wording.
+Invent fresh language for this topic.
+Avoid stock phrases, repeated transitions, and template-like hooks.
+
+STRICT OUTPUT:
+Return raw narration text only.
+No markdown.
+No headers.
+No bullet points.
+No bracketed stage directions.
+No explanation outside the narration.`;
+}
+
+function buildScriptDoctorPrompt(topic, outlineWithNarration, { language, tone }) {
+  const outputLanguage = LANGUAGE_LABELS[language] || 'Thai';
+
+  const toneInstruction = TONE_LABELS[tone]
+    ? TONE_LABELS[tone]
+    : 'Keep the tone that best fits the topic and the existing script.';
+
+  return `You are a senior YouTube script editor and retention specialist.
+
+Your job is to polish a complete generated script.
+Do not change the topic.
+Do not add unsupported factual claims.
+Do not remove important section meaning.
+Do not change the JSON shape.
+Do not translate the script into another language.
+
+OUTPUT LANGUAGE: ${outputLanguage}
+Keep all user-facing fields in this language.
+
+TONE: ${toneInstruction}
+
+TOPIC:
+"${topic}"
+
+EDITING GOALS:
+- Strengthen the opening hook if it feels generic.
+- Make the midpoint turn sharper.
+- Make the climax more intense or consequential.
+- Make the ending more memorable.
+- Remove repeated phrases, repeated opening patterns, and repeated endings.
+- Improve transitions between sections.
+- Cut filler and generic background.
+- Keep narration natural, spoken, and human.
+- Keep the same number of sections.
+- Keep each section's core meaning.
+- Keep the existing fields: sectionTitle, hookOrGoal, keyPoint, narration.
+
+IMPORTANT:
+The rules define structure, not wording.
+Do not replace everything with a formula.
+Do not add stock YouTube phrases.
+Do not over-polish into stiff corporate language.
+
+SCRIPT TO POLISH:
+${JSON.stringify(outlineWithNarration, null, 2)}
+
+STRICT OUTPUT FORMAT:
+Return a JSON array only.
+No markdown fences.
+No explanation.
+No text outside the JSON.
+
+Format:
+[
+  {
+    "sectionTitle": "...",
+    "hookOrGoal": "...",
+    "keyPoint": "...",
+    "narration": "..."
+  }
+]`;
+}
+
+function validatePolishedScript(original, polished) {
+  if (!Array.isArray(polished)) return false;
+  if (polished.length !== original.length) return false;
+  
+  const requiredKeys = ['sectionTitle', 'hookOrGoal', 'keyPoint', 'narration'];
+  for (let i = 0; i < polished.length; i++) {
+    const item = polished[i];
+    if (!item || typeof item !== 'object') return false;
+    for (const key of requiredKeys) {
+      if (typeof item[key] !== 'string' || !item[key].trim()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+async function maybePolishScript(topic, sections, options = {}) {
+  const { tier = 'standard', durationMinutes = 8, polishScript = true, language = 'thai', tone = 'auto' } = options;
+  const shouldPolish =
+    polishScript !== false &&
+    Number(durationMinutes || 0) >= 3;
+
+  if (!shouldPolish) {
+    return sections;
+  }
+
+  const model = resolveScriptModel(tier);
+
+  try {
+    const prompt = buildScriptDoctorPrompt(topic, sections, { language, tone });
+    const result = await runModel(model, {
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 4096,
+      temperature: 0.4,
+    });
+    const polishedContent = result.result.response || result.result.text;
+    const polished = parseJsonArray(polishedContent);
+
+    if (validatePolishedScript(sections, polished)) {
+      return polished;
+    }
+    
+    console.warn('[Script Doctor] Validation failed. Falling back to original script.');
+    return sections;
+  } catch (error) {
+    console.warn('[Script Doctor] Script polish failed. Using unpolished script.', error);
+    return sections;
+  }
+}
+
 /**
  * Step 1: Generate a structured storyboard outline for the topic.
  * Returns an array of objects (not plain strings) so each section carries
@@ -238,43 +718,7 @@ export async function generateOutline(topic, options = {}) {
   } = options;
 
   const model = resolveScriptModel(tier);
-  const { sectionCount } = deriveStoryboardShape(durationMinutes);
-
-  const languageInstruction = LANGUAGE_LABELS[language]
-    ? `เขียนเป็น${LANGUAGE_LABELS[language]}ทั้งหมด`
-    : 'เขียนเป็นภาษาไทยทั้งหมด';
-
-  const toneInstruction = TONE_LABELS[tone]
-    ? `ใช้โทนการเล่าเรื่องแบบ: ${TONE_LABELS[tone]}`
-    : 'พิจารณาหัวข้อแล้วเลือกโทนการเล่าเรื่องที่เหมาะสมที่สุดเอง (เช่น สารคดีหรู, ลึกลับชวนสงสัย, เป็นกันเอง) แล้วคงโทนนั้นตลอดทั้งบท';
-
-  const angleInstruction = ANGLE_LABELS[angle]
-    ? `จัดโครงเรื่องตามมุมมอง: ${ANGLE_LABELS[angle]}`
-    : 'พิจารณาหัวข้อแล้วเลือกมุมมอง/ประเภทเนื้อหาที่เหมาะสมที่สุดเอง (เช่น ปริศนาลึกลับ, วิทยาศาสตร์, Top List, ประวัติศาสตร์)';
-
-  const prompt = `คุณคือนักเขียนสคริปต์ YouTube มือโปร เชี่ยวชาญด้าน documentary/educational storytelling
-สไตล์การเล่าเรื่องของคุณมี "hook" ที่ดึงดูดความสนใจ ไม่ใช่การไล่ลำดับเวลาแบบสารานุกรม
-
-หัวข้อ: "${topic}"
-${languageInstruction}
-${toneInstruction}
-${angleInstruction}
-
-สร้าง storyboard ที่มี ${sectionCount} sections พอดี โดยแต่ละ section ต้องมี:
-1. "sectionTitle": ชื่อหัวข้อสั้นๆของตอนนั้น
-2. "hookOrGoal": คำถามหรือความคาใจที่ตอนนี้ทิ้งไว้ ซึ่งจะถูกคลี่คลายหรือต่อยอดใน section ถัดไป (สำหรับ section สุดท้าย ให้เป็นข้อคิด/จุดสรุปที่กระทบใจ ไม่ใช่คำถามทิ้งไว้)
-3. "keyPoint": ประเด็นหลักหนึ่งอย่างที่ section นี้ต้องเล่าให้ชัด
-
-กฎสำคัญ:
-- Section แรกต้องเป็น Hook ที่เปิดด้วยคำถามชวนสงสัยหรือข้อเท็จจริงที่ขัดความเข้าใจทั่วไป ห้ามขึ้นต้นด้วย "ในปี" หรือ "เรื่องราวของ..." ตรงๆ
-- แต่ละ section ต้องเชื่อมกับ section ก่อนหน้าและถัดไปอย่างมีเหตุผล ไม่ใช่หัวข้อแยกที่บังเอิญอยู่เรื่องเดียวกัน
-- ห้ามมี section ที่ซ้ำประเด็นกัน
-
-**STRICT OUTPUT FORMAT:** ตอบเป็น JSON array เท่านั้น ไม่มีคำอธิบาย ไม่มี markdown fence ห้ามมีข้อความใดๆนอก JSON
-รูปแบบ:
-[
-  {"sectionTitle": "...", "hookOrGoal": "...", "keyPoint": "..."}
-]`;
+  const prompt = buildOutlinePrompt(topic, { durationMinutes, language, tone, angle });
 
   const MAX_ATTEMPTS = 3;
   let lastErr;
@@ -327,7 +771,7 @@ ${angleInstruction}
  * @param {number} index - 1-based section number
  * @param {number} total - total section count
  * @param {string|null} previousSummary - one-sentence recap of the prior section's ending, or null for the first section
- * @param {object} options - { language, tone, tier, wordsPerSection }
+ * @param {object} options - { language, tone, tier, wordsPerSection, freshnessMemory }
  */
 export async function generateSectionNarration(topic, section, index, total, previousSummary, options = {}) {
   const {
@@ -335,39 +779,18 @@ export async function generateSectionNarration(topic, section, index, total, pre
     tone = 'auto',
     tier = 'standard',
     wordsPerSection = 180,
+    freshnessMemory = {},
   } = options;
 
   const model = resolveScriptModel(tier);
-
-  const languageInstruction = LANGUAGE_LABELS[language] ? LANGUAGE_LABELS[language] : 'ภาษาไทย';
-
-  const toneInstruction = TONE_LABELS[tone]
-    ? TONE_LABELS[tone]
-    : 'เลือกโทนที่เหมาะกับเนื้อหานี้เอง แต่ให้สอดคล้องกับน้ำเสียงของบททั้งเรื่อง';
-
-  const contextBlock = previousSummary
-    ? `เนื้อหาตอนก่อนหน้าจบลงด้วย: "${previousSummary}"\nเขียนตอนนี้ให้ต่อเนื่องจากจุดนั้นโดยตรง ห้ามเล่าซ้ำสิ่งที่พูดไปแล้ว`
-    : 'นี่คือ section แรกของคลิป ต้องเป็น Hook ที่ดึงดูดความสนใจทันที';
-
-  const prompt = `คุณคือนักเขียนสคริปต์ YouTube มือโปร กำลังเขียนตอนหนึ่งของสารคดีต่อเนื่อง
-หัวข้อรวมของคลิป: "${topic}"
-ภาษา: ${languageInstruction}
-โทน: ${toneInstruction}
-
-Section ${index} จาก ${total}
-ชื่อตอน: "${section.sectionTitle}"
-ประเด็นหลักที่ต้องเล่า: ${section.keyPoint}
-สิ่งที่ตอนนี้ต้องทิ้งไว้ให้คนอยากดูต่อ: ${section.hookOrGoal}
-
-${contextBlock}
-
-เขียนบทพากย์ยาวประมาณ ${wordsPerSection} คำ ตามกฎนี้:
-1. ประโยคสั้น กระชับ จังหวะเหมาะกับการพากย์เสียง ไม่ใช่ภาษาเขียนทางการ
-2. ห้ามใช้โครงสร้างประโยคเปิดซ้ำแบบเดิมทุก section (เช่น "X ถูกสร้างขึ้นเพื่อ...")
-3. ใส่มุมมองความรู้สึกของบุคคล/สถานการณ์ ไม่ใช่แค่เรียงข้อมูลตามลำดับเวลา
-4. จบ section ด้วยประโยคที่โยงไปสู่ "${section.hookOrGoal}" อย่างเป็นธรรมชาติ
-
-**STRICT OUTPUT:** ตอบเป็นข้อความพากย์ดิบๆเท่านั้น ห้ามมี markdown, หัวข้อ, เครื่องหมายวงเล็บอธิบาย, หรือคำอธิบายใดๆนอกเนื้อบท`;
+  const prompt = buildNarrationPrompt(
+    topic,
+    section,
+    index,
+    total,
+    previousSummary,
+    { language, tone, wordsPerSection, freshnessMemory }
+  );
 
   const result = await runModel(model, {
     messages: [
@@ -379,7 +802,7 @@ ${contextBlock}
   let narration = (result.result.response || result.result.text).trim();
   if (!narration) {
     console.warn(`[Script Gen] Warning: Received empty or null narration for section ${index}. Using fallback text.`);
-    return `(เนื้อหาสำหรับส่วนนี้ยังไม่พร้อมใช้งาน กรุณาตรวจสอบ API หรือลองใหม่อีกครั้ง)`;
+    return `(Content for this section is not available yet. Please check the API or try again.)`;
   }
   narration = narration.replace(/```[\s\S]*?```/g, '').trim();
   return narration;
@@ -404,7 +827,14 @@ function summarizeForNextSection(narrationText) {
   return sentences[sentences.length - 1].slice(-200);
 }
 
-export { deriveStoryboardShape, summarizeForNextSection, parseJsonArray, stripReasoning };
+export {
+  deriveStoryboardShape,
+  summarizeForNextSection,
+  parseJsonArray,
+  stripReasoning,
+  updateFreshnessMemory,
+  maybePolishScript
+};
 
 /**
  * Step 3: Analyze timestamped narration segments and write descriptive image prompts.
