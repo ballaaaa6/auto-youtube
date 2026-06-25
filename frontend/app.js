@@ -59,7 +59,16 @@ async function isBackendAlive(url) {
     const timeout = setTimeout(() => controller.abort(), 4000);
     const res = await fetch(`${url}/api/health`, { signal: controller.signal });
     clearTimeout(timeout);
-    return res.ok;
+    if (!res.ok) return false;
+    
+    // Ensure the response is JSON, not HTML (which is served by Cloudflare warning pages)
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return false;
+    }
+    
+    const data = await res.json();
+    return data && data.status === 'ok';
   } catch (err) {
     return false;
   }
