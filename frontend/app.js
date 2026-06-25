@@ -25,6 +25,112 @@ const tierToggle = document.getElementById('tier-toggle');
 const tierButtons = tierToggle.querySelectorAll('.tier-btn');
 
 let selectedTier = 'standard'; // 'standard' | 'premium'
+let activeCustomSelect = null;
+
+function closeCustomSelect(selectRoot) {
+  if (!selectRoot) return;
+  selectRoot.classList.remove('open');
+  const button = selectRoot.querySelector('.custom-select-button');
+  const menu = selectRoot.querySelector('.custom-select-menu');
+  if (button) button.setAttribute('aria-expanded', 'false');
+  if (menu) menu.hidden = true;
+  if (activeCustomSelect === selectRoot) activeCustomSelect = null;
+}
+
+function updateCustomSelectLabel(nativeSelect) {
+  const wrapper = nativeSelect.closest('.custom-select');
+  if (!wrapper) return;
+
+  const selectedOption = nativeSelect.options[nativeSelect.selectedIndex];
+  const label = selectedOption ? selectedOption.textContent.trim() : '';
+  const valueNode = wrapper.querySelector('.custom-select-value');
+  if (valueNode) valueNode.textContent = label;
+
+  wrapper.querySelectorAll('.custom-select-option').forEach(optionButton => {
+    const isSelected = optionButton.dataset.value === nativeSelect.value;
+    optionButton.classList.toggle('is-selected', isSelected);
+    optionButton.setAttribute('aria-selected', String(isSelected));
+  });
+}
+
+function buildCustomSelect(nativeSelect) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'custom-select';
+
+  nativeSelect.parentNode.insertBefore(wrapper, nativeSelect);
+  wrapper.appendChild(nativeSelect);
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'custom-select-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.innerHTML = `
+    <span class="custom-select-value"></span>
+    <span class="custom-select-arrow">▾</span>
+  `;
+
+  const menu = document.createElement('div');
+  menu.className = 'custom-select-menu';
+  menu.setAttribute('role', 'listbox');
+  menu.hidden = true;
+
+  Array.from(nativeSelect.options).forEach((option, index) => {
+    const optionButton = document.createElement('button');
+    optionButton.type = 'button';
+    optionButton.className = 'custom-select-option';
+    optionButton.dataset.value = option.value;
+    optionButton.setAttribute('role', 'option');
+    optionButton.setAttribute('aria-selected', String(option.selected));
+    optionButton.textContent = option.textContent.trim();
+
+    if (index === 0) {
+      optionButton.classList.add('is-placeholder');
+    }
+
+    optionButton.addEventListener('click', () => {
+      nativeSelect.value = option.value;
+      nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      updateCustomSelectLabel(nativeSelect);
+      closeCustomSelect(wrapper);
+      button.focus();
+    });
+
+    menu.appendChild(optionButton);
+  });
+
+  button.addEventListener('click', () => {
+    const willOpen = !wrapper.classList.contains('open');
+    if (activeCustomSelect && activeCustomSelect !== wrapper) {
+      closeCustomSelect(activeCustomSelect);
+    }
+    wrapper.classList.toggle('open', willOpen);
+    button.setAttribute('aria-expanded', String(willOpen));
+    menu.hidden = !willOpen;
+    activeCustomSelect = willOpen ? wrapper : null;
+  });
+
+  nativeSelect.addEventListener('change', () => updateCustomSelectLabel(nativeSelect));
+
+  wrapper.appendChild(button);
+  wrapper.appendChild(menu);
+  updateCustomSelectLabel(nativeSelect);
+}
+
+[languageSelect, toneSelect, angleSelect].forEach(buildCustomSelect);
+
+document.addEventListener('click', (event) => {
+  if (!activeCustomSelect) return;
+  if (!activeCustomSelect.contains(event.target)) {
+    closeCustomSelect(activeCustomSelect);
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && activeCustomSelect) {
+    closeCustomSelect(activeCustomSelect);
+  }
+});
 
 // --- Accordion open/close + persisted settings ---
 const SETTINGS_KEY = 'script_settings_v1';
@@ -49,6 +155,7 @@ function loadSavedSettings() {
     }
     if (saved.panelOpen) {
       settingsPanel.hidden = false;
+      settingsPanel.classList.add('is-open');
       settingsToggleArrow.classList.add('open');
       settingsToggle.setAttribute('aria-expanded', 'true');
     }
@@ -71,7 +178,13 @@ function saveSettings() {
 
 settingsToggle.addEventListener('click', () => {
   const isOpen = !settingsPanel.hidden;
-  settingsPanel.hidden = isOpen;
+  if (isOpen) {
+    settingsPanel.classList.remove('is-open');
+    settingsPanel.hidden = true;
+  } else {
+    settingsPanel.hidden = false;
+    settingsPanel.classList.add('is-open');
+  }
   settingsToggleArrow.classList.toggle('open', !isOpen);
   settingsToggle.setAttribute('aria-expanded', String(!isOpen));
   saveSettings();

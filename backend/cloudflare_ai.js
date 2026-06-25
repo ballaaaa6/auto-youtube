@@ -63,7 +63,22 @@ const LANGUAGE_LABELS = {
   auto: null, // null = let the model infer from topic; defaults to Thai in the prompt wording
   thai: 'ภาษาไทย',
   english: 'English',
+  arabic: 'Arabic',
+  chinese_simplified: 'Simplified Chinese',
+  chinese_traditional: 'Traditional Chinese',
+  french: 'French',
+  german: 'German',
+  hindi: 'Hindi',
+  indonesian: 'Indonesian',
+  italian: 'Italian',
   japanese: '日本語 (Japanese)',
+  korean: 'Korean',
+  malay: 'Malay',
+  portuguese: 'Portuguese',
+  russian: 'Russian',
+  spanish: 'Spanish',
+  turkish: 'Turkish',
+  vietnamese: 'Vietnamese',
 };
 
 const TONE_LABELS = {
