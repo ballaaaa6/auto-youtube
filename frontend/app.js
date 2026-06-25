@@ -255,7 +255,7 @@ async function initializeBackendUrl() {
 
   // Otherwise, fetch the latest synced URL from the cloud
   try {
-    const response = await fetch('https://keyvalue.immanuel.co/api/KeyVal/GetValue/8d5ycaxi/backend_url');
+    const response = await fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/8d5ycaxi/backend_url?_t=${Date.now()}`);
     if (response.ok) {
       const hex = await response.json();
       if (hex) {
