@@ -14,6 +14,9 @@ const btnDownloadVideo = document.getElementById('btn-download-video');
 
 let generatedVideoPath = ''; // Store absolute path of generated video on local backend
 let backendUrl = localStorage.getItem('backend_url') || 'http://localhost:3000';
+// Serverless fallback: the Pages Function runs on the same origin as the dashboard,
+// so it is always reachable even when the local backend / tunnel is down.
+const SERVERLESS_SCRIPT_URL = `${window.location.origin}/api/generate-script`;
 
 // Fetch the synchronized backend URL from Cloud KV on page load
 async function initializeBackendUrl() {
@@ -48,6 +51,20 @@ async function initializeBackendUrl() {
     console.warn('Failed to load cloud backend URL, using cached/default:', err);
   }
 }
+
+// Check whether a backend URL is actually reachable by hitting its health endpoint.
+async function isBackendAlive(url) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${url}/api/health`, { signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
 initializeBackendUrl();
 
 // Get base URL for backend APIs
@@ -80,11 +97,26 @@ btnGenerateScript.addEventListener('click', async () => {
   btnGenerateScript.disabled = true;
   logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
   try {
-    const response = await fetch(getScriptGenUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic })
-    });
+    // Try the local backend first. If it is unreachable, transparently fall back
+    // to the serverless Pages Function so script generation never hard-fails.
+    let response;
+    let usedServerless = false;
+
+    if (await isBackendAlive(getBackendUrl())) {
+      response = await fetch(getScriptGenUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      });
+    } else {
+      logToTerminal(`[System] Local backend unreachable. Falling back to serverless AI...`, 'system');
+      usedServerless = true;
+      response = await fetch(SERVERLESS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      });
+    }
 
     if (!response.ok) {
       const err = await response.json();
@@ -94,7 +126,9 @@ btnGenerateScript.addEventListener('click', async () => {
     const data = await response.json();
     scriptEditor.value = JSON.stringify(data.script, null, 2);
     
-    logToTerminal('✅ Script and image prompts generated successfully! Please verify on the left editor.', 'success');
+    logToTerminal(usedServerless
+      ? '✅ Script generated via serverless AI! Please verify on the left editor.'
+      : '✅ Script and image prompts generated successfully! Please verify on the left editor.', 'success');
     btnRunPipeline.disabled = false;
     
     // Set initial title and description draft

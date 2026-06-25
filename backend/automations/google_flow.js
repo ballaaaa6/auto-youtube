@@ -1,11 +1,16 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Resolve repo root from this file's location so the server can be started
+// from any working directory (cwd), not only from backend/.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 // Load selectors from docs/SELECTORS.md
-const SELECTORS_PATH = path.join(process.cwd(), '../docs/SELECTORS.md');
+const SELECTORS_PATH = path.resolve(__dirname, '../../docs/SELECTORS.md');
 const content = fs.readFileSync(SELECTORS_PATH, 'utf-8');
 const jsonBlocks = [...content.matchAll(/```json\s*([\s\S]*?)\s*```/g)].map(m => JSON.parse(m[1]));
 const selectors = Object.assign({}, ...jsonBlocks).google_flow;

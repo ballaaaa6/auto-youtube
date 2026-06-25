@@ -21,11 +21,25 @@ import { uploadToYouTube } from './automations/youtube_upload.js';
 dotenv.config();
 const execPromise = promisify(exec);
 
+// Process-level safety nets: log and continue instead of crashing the whole server
+// on an unhandled async rejection (e.g. a flaky Cloudflare API call).
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Health check endpoint so the dashboard can verify the backend is reachable.
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
 
 const TEMP_DIR = path.resolve('./temp');
 const OUTPUT_DIR = path.resolve('./output');
