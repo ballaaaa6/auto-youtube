@@ -212,15 +212,18 @@ function detectOpeningMove(line = '') {
   const trimmed = String(line).trim();
 
   if (!trimmed) return 'unknown';
-  if (/[?？]$/i.test(trimmed) || /(ไหม|หรือเปล่า|หรือไม่|อย่างไร|กันแน่|ใช่ไหม|หรือยัง|ได้อย่างไร|อย่างไรกันแน่)$/.test(trimmed)) return 'direct_question';
+  // Thai question particles
+  if (/[?？]$/i.test(trimmed) || /(\u0e44\u0e2b\u0e21|\u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1b\u0e25\u0e48\u0e32|\u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48|\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23|\u0e01\u0e31\u0e19\u0e41\u0e19\u0e48|\u0e43\u0e0a\u0e48\u0e44\u0e2b\u0e21|\u0e2b\u0e23\u0e37\u0e2d\u0e22\u0e31\u0e07|\u0e44\u0e14\u0e49\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23|\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23\u0e01\u0e31\u0e19\u0e41\u0e19\u0e48)$/.test(trimmed)) return 'direct_question';
   
+  // Thai scenario words
   if (/^(imagine|picture|suppose|pretend|what\s+if|you\s+are|you\s+wake\s+up|you\s+stand|you\s+walk)\b/i.test(trimmed) ||
-      /^(จินตนาการ|ลองนึก|สมมุติ|สมมติ|คิดดูว่า|จะเกิดอะไรขึ้นถ้า|ถ้าหาก|คุณตื่นขึ้นมา|คุณยืนอยู่|คุณเดิน|ลองจินตนาการ)/i.test(trimmed)) {
+      /^(\u0e08\u0e34\u0e19\u0e15\u0e19\u0e32\u0e01\u0e32\u0e23|\u0e25\u0e2d\u0e07\u0e19\u0e36\u0e01|\u0e2a\u0e21\u0e21\u0e38\u0e15\u0e34|\u0e2a\u0e21\u0e21\u0e15\u0e34|\u0e04\u0e34\u0e14\u0e14\u0e39\u0e27\u0e48\u0e32|\u0e08\u0e30\u0e40\u0e01\u0e34\u0e14\u0e2d\u0e30\u0e44\u0e23\u0e02\u0e36\u0e49\u0e19\u0e16\u0e49\u0e32|\u0e16\u0e49\u0e32\u0e2b\u0e32\u0e01|\u0e04\u0e38\u0e13\u0e15\u0e37\u0e48\u0e19\u0e02\u0e36\u0e49\u0e19\u0e21\u0e32|\u0e04\u0e38\u0e13\u0e22\u0e37\u0e19\u0e2d\u0e22\u0e39\u0e48|\u0e04\u0e38\u0e13\u0e40\u0e14\u0e34\u0e19|\u0e25\u0e2d\u0e07\u0e08\u0e34\u0e19\u0e15\u0e19\u0e32\u0e01\u0e32\u0e23)/i.test(trimmed)) {
     return 'viewer_scenario';
   }
   
-  if (/[\d๐-๙]|percent|million|billion|trillion|dead|missing|collapsed|vanished|killed|lost|found/i.test(trimmed) ||
-      /(เปอร์เซ็นต์|%|ล้าน|พันล้าน|แสนล้าน|ล้านล้าน|ตาย|เสียชีวิต|ศพ|หายสาบสูญ|สูญหาย|พังทลาย|ถล่ม|ยุบ|หายไป|ฆ่า|พบ|เจอ|ค้นพบ)/i.test(trimmed)) {
+  // Thai numbers and jarring fact words
+  if (/[\d\u0e50-\u0e59]|percent|million|billion|trillion|dead|missing|collapsed|vanished|killed|lost|found/i.test(trimmed) ||
+      /(\u0e40\u0e1b\u0e2d\u0e23\u0e4c\u0e40\u0e0b\u0e47\u0e19\u0e15\u0e4c|%|\u0e25\u0e49\u0e32\u0e19|\u0e1e\u0e31\u0e19\u0e25\u0e49\u0e32\u0e19|\u0e41\u0e2a\u0e19\u0e25\u0e49\u0e32\u0e19|\u0e25\u0e49\u0e32\u0e19\u0e25\u0e49\u0e32\u0e19|\u0e15\u0e32\u0e22|\u0e40\u0e2a\u0e35\u0e22\u0e0a\u0e35\u0e27\u0e34\u0e15|\u0e28\u0e1e|\u0e2b\u0e32\u0e22\u0e2a\u0e32\u0e1a\u0e2a\u0e39\u0e0d|\u0e2a\u0e39\u0e0d\u0e2b\u0e32\u0e22|\u0e1e\u0e31\u0e07\u0e17\u0e25\u0e32\u0e22|\u0e16\u0e25\u0e48\u0e21|\u0e22\u0e38\u0e1a|\u0e2b\u0e32\u0e22\u0e44\u0e1b|\u0e06\u0e48\u0e32|\u0e1e\u0e1a|\u0e40\u0e08\u0e2d|\u0e04\u0e49\u0e19\u0e1e\u0e1a)/i.test(trimmed)) {
     return 'jarring_fact';
   }
 
@@ -231,7 +234,8 @@ function detectEndingMove(line = '') {
   const trimmed = String(line).trim();
 
   if (!trimmed) return 'unknown';
-  if (/[?？]$/i.test(trimmed) || /(ไหม|หรือเปล่า|หรือไม่|อย่างไร|กันแน่|ใช่ไหม|หรือยัง|ได้อย่างไร|อย่างไรกันแน่)$/.test(trimmed)) return 'hanging_question';
+  // Thai question particles
+  if (/[?？]$/i.test(trimmed) || /(\u0e44\u0e2b\u0e21|\u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1b\u0e25\u0e48\u0e32|\u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48|\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23|\u0e01\u0e31\u0e19\u0e41\u0e19\u0e48|\u0e43\u0e0a\u0e48\u0e44\u0e2b\u0e21|\u0e2b\u0e23\u0e37\u0e2d\u0e22\u0e31\u0e07|\u0e44\u0e14\u0e49\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23|\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e45\u0e23\u0e01\u0e31\u0e19\u0e41\u0e19\u0e48)$/.test(trimmed)) return 'hanging_question';
   if (/\.\.\.$/.test(trimmed)) return 'unresolved_consequence';
   if (trimmed.length <= 80) return 'blunt_stop';
 
@@ -658,6 +662,16 @@ function validatePolishedScript(original, polished) {
   return true;
 }
 
+function sanitizeScriptShape(script) {
+  if (!Array.isArray(script)) return [];
+  return script.map(item => ({
+    sectionTitle: String(item.sectionTitle || '').trim(),
+    hookOrGoal: String(item.hookOrGoal || '').trim(),
+    keyPoint: String(item.keyPoint || '').trim(),
+    narration: String(item.narration || '').trim(),
+  }));
+}
+
 async function maybePolishScript(topic, sections, options = {}) {
   const { tier = 'standard', durationMinutes = 8, polishScript = true, language = 'thai', tone = 'auto' } = options;
   const shouldPolish =
@@ -684,7 +698,7 @@ async function maybePolishScript(topic, sections, options = {}) {
     const polished = parseJsonArray(polishedContent);
 
     if (validatePolishedScript(sections, polished)) {
-      return polished;
+      return sanitizeScriptShape(polished);
     }
     
     console.warn('[Script Doctor] Validation failed. Falling back to original script.');
@@ -800,6 +814,7 @@ export async function generateSectionNarration(topic, section, index, total, pre
   });
 
   let narration = (result.result.response || result.result.text).trim();
+  narration = stripReasoning(narration);
   if (!narration) {
     console.warn(`[Script Gen] Warning: Received empty or null narration for section ${index}. Using fallback text.`);
     return `(Content for this section is not available yet. Please check the API or try again.)`;
