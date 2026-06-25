@@ -280,7 +280,7 @@ async function isBackendAlive(url) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(`${url}/api/health`, { signal: controller.signal });
+    const res = await fetch(`${url}/api/health?_t=${Date.now()}`, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return false;
     
