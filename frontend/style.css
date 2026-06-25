@@ -293,7 +293,7 @@ video {
 .accordion {
   border: 1px solid rgba(139, 92, 246, 0.16);
   border-radius: 18px;
-  overflow: hidden;
+  overflow: visible;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
     rgba(8, 10, 24, 0.72);
@@ -347,6 +347,7 @@ video {
   padding: 1.25rem 1rem;
   max-height: 900px;
   opacity: 1;
+  overflow: visible;
 }
 
 [hidden] {
@@ -369,6 +370,11 @@ input[type="range"] {
 
 .custom-select {
   position: relative;
+  z-index: 1;
+}
+
+.custom-select.open {
+  z-index: 80;
 }
 
 .custom-select-button {
