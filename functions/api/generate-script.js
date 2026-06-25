@@ -205,6 +205,16 @@ const ANGLE_LABELS = {
   finance: 'Finance and macroeconomics framing',
 };
 
+function summarizeForNextSection(narrationText) {
+  if (!narrationText) return null;
+  const sentences = narrationText
+    .split(/(?<=[.!?。！？])\s+|\n+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (sentences.length === 0) return narrationText.slice(-150);
+  return sentences[sentences.length - 1].slice(-200);
+}
+
 /**
  * Deterministically assign each section a structural role based on its
  * position in the video's retention curve.
