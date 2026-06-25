@@ -82,38 +82,34 @@ app.post('/api/generate-script', async (req, res) => {
     const { wordsPerSection } = deriveStoryboardShape(durationMinutes);
     const narrationOptions = { language, tone, tier, wordsPerSection };
 
-    let script = [];
-    let previousSummary = null;
-    let freshnessMemory = {
-      previousOpeningMove: null,
-      previousEndingMove: null,
-      recentOpeningLines: [],
-      recentEndingLines: [],
-    };
-
-    for (let i = 0; i < outline.length; i++) {
-      const section = outline[i];
-      console.log(`[Script Gen] Expanding section ${i + 1}/${outline.length}: "${section.sectionTitle}"...`);
+    console.log(`[Script Gen] Expanding ${outline.length} sections in parallel...`);
+    const narrationPromises = outline.map(async (section, i) => {
+      const staticPreviousSummary = i > 0 ? outline[i - 1].hookOrGoal : null;
+      const freshnessMemory = {
+        previousOpeningMove: null,
+        previousEndingMove: null,
+        recentOpeningLines: [],
+        recentEndingLines: [],
+      };
 
       const narration = await generateSectionNarration(
         topic,
         section,
         i + 1,
         outline.length,
-        previousSummary,
+        staticPreviousSummary,
         { ...narrationOptions, freshnessMemory }
       );
 
-      script.push({
+      return {
         sectionTitle: section.sectionTitle,
         hookOrGoal: section.hookOrGoal,
         keyPoint: section.keyPoint,
         narration: narration
-      });
+      };
+    });
 
-      freshnessMemory = updateFreshnessMemory(freshnessMemory, narration);
-      previousSummary = summarizeForNextSection(narration);
-    }
+    let script = await Promise.all(narrationPromises);
 
     console.log(`[Script Gen] Narration generated. Polishing script (polishScript=${req.body.polishScript !== false})...`);
     script = await maybePolishScript(topic, script, {

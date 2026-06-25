@@ -769,19 +769,18 @@ export async function onRequest(context) {
 
     // Step 2: Expand each section to narration, chaining context forward
     const { wordsPerSection } = deriveStoryboardShape(durationMinutes);
-    let script = [];
-    let previousSummary = null;
-    let freshnessMemory = {
-      previousOpeningMove: null,
-      previousEndingMove: null,
-      recentOpeningLines: [],
-      recentEndingLines: [],
-    };
+    console.log(`[Pages Function] Expanding ${outline.length} sections in parallel...`);
+    const narrationPromises = outline.map(async (section, i) => {
+      const staticPreviousSummary = i > 0 ? outline[i - 1].hookOrGoal : null;
+      const freshnessMemory = {
+        previousOpeningMove: null,
+        previousEndingMove: null,
+        recentOpeningLines: [],
+        recentEndingLines: [],
+      };
 
-    for (let i = 0; i < outline.length; i++) {
-      const section = outline[i];
       const narrationPrompt = buildNarrationPrompt(
-        topic, section, i + 1, outline.length, previousSummary,
+        topic, section, i + 1, outline.length, staticPreviousSummary,
         { language, tone, wordsPerSection, freshnessMemory }
       );
 
@@ -793,16 +792,15 @@ export async function onRequest(context) {
       });
 
       const narration = getAiResponse(narrationResult).trim();
-      script.push({
+      return {
         sectionTitle: section.sectionTitle,
         hookOrGoal: section.hookOrGoal,
         keyPoint: section.keyPoint,
         narration: narration
-      });
+      };
+    });
 
-      freshnessMemory = updateFreshnessMemory(freshnessMemory, narration);
-      previousSummary = summarizeForNextSection(narration);
-    }
+    let script = await Promise.all(narrationPromises);
 
     script = await maybePolishScript(env, model, topic, script, {
       language,
