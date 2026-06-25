@@ -82,6 +82,73 @@ const ANGLE_LABELS = {
 };
 
 /**
+ * Qwen3 (the standard-tier model) is a reasoning model that emits a
+ * <think>...</think> block before its answer. Those reasoning blocks often
+ * contain '[' and ']' characters, which wreck naive JSON-array extraction
+ * (the first '[' found would be inside the think block, not the real answer).
+ * Strip them before attempting any parsing.
+ */
+function stripReasoning(text) {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
+/**
+ * Robustly extract a JSON array out of an LLM response.
+ *
+ * Why this exists: outline + image-prompt outputs are now rich object arrays
+ * (multiple string fields per item) written in Thai, and the old parser did a
+ * blanket `jsonStr.replace(/'/g, '"')` which corrupts any apostrophe inside a
+ * value (e.g. "don't", "it's", or quotes used decoratively in Thai). That plus
+ * unescaped double-quotes in values and trailing commas made JSON.parse throw
+ * "Expected ',' or '}' after property value". This helper tries several
+ * progressive recovery strategies before giving up.
+ *
+ * Order of attempts:
+ *  1. Strict parse of the raw substring between the first '[' and last ']'.
+ *  2. Remove trailing commas before '}' / ']'.
+ *  3. Convert single quotes that sit at JSON structural boundaries only
+ *     (immediately after { [ : ,  or  immediately before : , } ]) — NOT a
+ *     blanket replace, so apostrophes inside string values are preserved.
+ */
+function parseJsonArray(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string' || !raw.trim()) {
+    throw new Error('empty AI output');
+  }
+
+  let text = stripReasoning(raw);
+  // Drop markdown code fences if present.
+  text = text.replace(/```(?:json)?/gi, '').trim();
+
+  const startIdx = text.indexOf('[');
+  const endIdx = text.lastIndexOf(']');
+  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+    throw new Error('no JSON array found in AI output');
+  }
+  const jsonStr = text.substring(startIdx, endIdx + 1);
+
+  // Attempt 1: strict parse.
+  try {
+    return JSON.parse(jsonStr);
+  } catch (_) { /* fall through */ }
+
+  // Attempt 2: strip trailing commas that precede a closing brace/bracket.
+  try {
+    return JSON.parse(jsonStr.replace(/,\s*([}\]])/g, '$1'));
+  } catch (_) { /* fall through */ }
+
+  // Attempt 3: targeted single-quote -> double-quote at structural boundaries.
+  try {
+    const fixed = jsonStr
+      .replace(/([{[:,]\s*)'/g, '$1"')   // opening quote after structural char
+      .replace(/'(\s*[:,}\]])/g, '"$1'); // closing quote before structural char
+    return JSON.parse(fixed);
+  } catch (_) { /* fall through */ }
+
+  throw new Error('AI output was not valid JSON');
+}
+
+/**
  * Step 1: Generate a structured storyboard outline for the topic.
  * Returns an array of objects (not plain strings) so each section carries
  * its own narrative purpose — this is what lets later narration calls stay
@@ -142,30 +209,30 @@ ${angleInstruction}
   {"sectionTitle": "...", "hookOrGoal": "...", "keyPoint": "..."}
 ]`;
 
-  const result = await runModel(model, {
-    messages: [
-      { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
-      { role: 'user', content: prompt }
-    ],
-  });
+  const MAX_ATTEMPTS = 2;
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const result = await runModel(model, {
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
+        { role: 'user', content: prompt }
+      ],
+    });
 
-  const content = result.result.response || result.result.text;
-  try {
-    if (Array.isArray(content)) {
-      return content;
+    const content = result.result.response || result.result.text;
+    try {
+      return parseJsonArray(content);
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[Script Gen] Outline parse attempt ${attempt}/${MAX_ATTEMPTS} failed: ${err.message}`);
+      if (attempt < MAX_ATTEMPTS) {
+        console.warn('[Script Gen] Retrying outline with a fresh generation...');
+      }
     }
-    const startIdx = content.indexOf('[');
-    const endIdx = content.lastIndexOf(']') + 1;
-    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-      throw new Error('AI output is not a JSON Array');
-    }
-    let jsonStr = content.substring(startIdx, endIdx);
-    jsonStr = jsonStr.replace(/'/g, '"');
-    return JSON.parse(jsonStr);
-  } catch (err) {
-    console.error('Failed to parse outline JSON:', content);
-    throw new Error('Failed to parse outline JSON: ' + err.message);
   }
+
+  console.error('[Script Gen] Outline JSON could not be parsed after retries. Last raw output was not valid JSON.');
+  throw new Error('Failed to parse outline JSON after ' + MAX_ATTEMPTS + ' attempts: ' + (lastErr ? lastErr.message : 'unknown'));
 }
 
 /**
@@ -261,7 +328,7 @@ function summarizeForNextSection(narrationText) {
   return sentences[sentences.length - 1].slice(-200);
 }
 
-export { deriveStoryboardShape, summarizeForNextSection };
+export { deriveStoryboardShape, summarizeForNextSection, parseJsonArray, stripReasoning };
 
 /**
  * Step 3: Analyze timestamped narration segments and write descriptive image prompts.
@@ -292,15 +359,7 @@ Return ONLY a JSON array matching the structure below. Do not include any markdo
 
   const content = result.result.response || result.result.text;
   try {
-    const startIdx = content.indexOf('[');
-    const endIdx = content.lastIndexOf(']') + 1;
-    if (startIdx === -1 || endIdx === -1) {
-      throw new Error('AI output is not a JSON Array');
-    }
-    let jsonStr = content.substring(startIdx, endIdx);
-    // Replace single quotes with double quotes for JSON parsing compatibility
-    jsonStr = jsonStr.replace(/'/g, '"');
-    return JSON.parse(jsonStr);
+    return parseJsonArray(content);
   } catch (err) {
     console.error('Failed to parse image prompts JSON:', content);
     throw new Error('Failed to parse image prompts JSON: ' + err.message);

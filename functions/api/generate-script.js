@@ -36,6 +36,64 @@ function getAiResponse(result) {
   return result.response || result.text || '';
 }
 
+// --- JSON parsing helpers (must stay in sync with backend/cloudflare_ai.js) ---
+
+/**
+ * Qwen3 (the standard-tier model) is a reasoning model that emits a
+ * <think>...</think> block before its answer. Those reasoning blocks often
+ * contain '[' and ']' characters, which wreck naive JSON-array extraction.
+ * Strip them before attempting any parsing.
+ */
+function stripReasoning(text) {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
+/**
+ * Robustly extract a JSON array out of an LLM response.
+ *
+ * The old parser did a blanket `jsonStr.replace(/'/g, '"')` which corrupts
+ * any apostrophe inside a value (e.g. "don't"), and it did not handle
+ * trailing commas or unescaped quotes in values. This helper tries several
+ * progressive recovery strategies before giving up.
+ */
+function parseJsonArray(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string' || !raw.trim()) {
+    throw new Error('empty AI output');
+  }
+
+  let text = stripReasoning(raw);
+  // Drop markdown code fences if present.
+  text = text.replace(/```(?:json)?/gi, '').trim();
+
+  const startIdx = text.indexOf('[');
+  const endIdx = text.lastIndexOf(']');
+  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+    throw new Error('no JSON array found in AI output');
+  }
+  const jsonStr = text.substring(startIdx, endIdx + 1);
+
+  // Attempt 1: strict parse.
+  try {
+    return JSON.parse(jsonStr);
+  } catch (_) { /* fall through */ }
+
+  // Attempt 2: strip trailing commas that precede a closing brace/bracket.
+  try {
+    return JSON.parse(jsonStr.replace(/,\s*([}\]])/g, '$1'));
+  } catch (_) { /* fall through */ }
+
+  // Attempt 3: targeted single-quote -> double-quote at structural boundaries.
+  try {
+    const fixed = jsonStr
+      .replace(/([{[:,]\s*)'/g, '$1"')   // opening quote after structural char
+      .replace(/'(\s*[:,}\]])/g, '"$1'); // closing quote before structural char
+    return JSON.parse(fixed);
+  } catch (_) { /* fall through */ }
+
+  throw new Error('AI output was not valid JSON');
+}
+
 // --- Model / prompt configuration (must stay in sync with backend/cloudflare_ai.js) ---
 
 function resolveScriptModel(tier) {
@@ -203,31 +261,35 @@ export async function onRequest(context) {
     // Step 1: Generate storyboard outline
     const outlinePrompt = buildOutlinePrompt(topic, { durationMinutes, language, tone, angle });
 
-    const outlineResult = await runModel(env, model, {
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
-        { role: 'user', content: outlinePrompt }
-      ],
-    });
-
-    const outlineContent = getAiResponse(outlineResult);
+    const MAX_ATTEMPTS = 2;
     let outline = [];
-    try {
-      if (Array.isArray(outlineContent)) {
-        outline = outlineContent;
-      } else {
-        const startIdx = outlineContent.indexOf('[');
-        const endIdx = outlineContent.lastIndexOf(']') + 1;
-        if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-          throw new Error('AI output is not a JSON Array');
+    let outlineParsed = false;
+    let lastErr;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const outlineResult = await runModel(env, model, {
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
+          { role: 'user', content: outlinePrompt }
+        ],
+      });
+
+      const outlineContent = getAiResponse(outlineResult);
+      try {
+        outline = parseJsonArray(outlineContent);
+        outlineParsed = true;
+        break;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[Pages Function] Outline parse attempt ${attempt}/${MAX_ATTEMPTS} failed: ${err.message}`);
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn('[Pages Function] Retrying outline with a fresh generation...');
         }
-        let jsonStr = outlineContent.substring(startIdx, endIdx);
-        jsonStr = jsonStr.replace(/'/g, '"');
-        outline = JSON.parse(jsonStr);
       }
-    } catch (err) {
-      console.error('Failed to parse outline JSON:', outlineContent);
-      throw new Error('Failed to parse outline JSON: ' + err.message);
+    }
+
+    if (!outlineParsed) {
+      console.error('[Pages Function] Outline JSON could not be parsed after retries.');
+      throw new Error('Failed to parse outline JSON after ' + MAX_ATTEMPTS + ' attempts: ' + (lastErr ? lastErr.message : 'unknown'));
     }
 
     // Step 2: Expand each section to narration, chaining context forward
