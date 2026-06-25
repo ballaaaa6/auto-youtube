@@ -842,13 +842,370 @@ function summarizeForNextSection(narrationText) {
   return sentences[sentences.length - 1].slice(-200);
 }
 
+// =============================================================================
+// YouTube metadata generation (SEO title, description, tags, thumbnail hook...)
+// =============================================================================
+
+/**
+ * Preferred model for metadata generation: the smartest available Workers AI
+ * instruct model. Can be overridden via the METADATA_MODEL env var.
+ */
+const DEFAULT_METADATA_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const METADATA_MODEL = process.env.METADATA_MODEL || DEFAULT_METADATA_MODEL;
+
+/**
+ * Build a compact, faithful summary of the finished script so the metadata
+ * prompt can reason about what the video actually covers without dumping the
+ * entire (often long) narration into the prompt.
+ */
+function summarizeScriptForMetadata(script) {
+  if (!Array.isArray(script) || script.length === 0) return '(No script content available.)';
+  return script.slice(0, 14).map((s, i) => {
+    const title = String(s.sectionTitle || '').trim();
+    const key = String(s.keyPoint || '').trim();
+    const narration = String(s.narration || '').trim();
+    const narrationExcerpt = narration ? narration.slice(0, 160) : '';
+    return `${i + 1}. ${title}${key ? ` — ${key}` : ''}${narrationExcerpt ? `\n   "${narrationExcerpt}${narration.length > 160 ? '…' : ''}"` : ''}`;
+  }).join('\n');
+}
+
+/**
+ * Optional competitive research: if a YouTube Data API key is configured, pull
+ * the top related videos for the topic and distill their public metadata into a
+ * compact research signal. Titles/snippets/channels/dates/view counts are used
+ * ONLY as signals — never copied. Failures are non-fatal.
+ */
+async function fetchYouTubeResearch(topic, apiKey) {
+  if (!apiKey || !topic) return null;
+  try {
+    const query = encodeURIComponent(topic);
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=${query}&relevanceLanguage=en&key=${apiKey}`;
+    const searchRes = await fetch(url);
+    if (!searchRes.ok) {
+      console.warn(`[Metadata] YouTube search failed (${searchRes.status}). Continuing without research.`);
+      return null;
+    }
+    const searchData = await searchRes.json();
+    const items = Array.isArray(searchData.items) ? searchData.items : [];
+    if (items.length === 0) return null;
+
+    // Fetch statistics (view counts) in a second call for the discovered video ids.
+    const videoIds = items
+      .map((it) => it && it.id && it.id.videoId)
+      .filter(Boolean)
+      .slice(0, 12)
+      .join(',');
+
+    let statsById = {};
+    if (videoIds) {
+      try {
+        const statsRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds}&key=${apiKey}`
+        );
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          (statsData.items || []).forEach((v) => {
+            statsById[v.id] = {
+              viewCount: v.statistics && v.statistics.viewCount,
+            };
+          });
+        }
+      } catch (_) { /* statistics are a bonus, ignore failures */ }
+    }
+
+    const compact = items
+      .filter((it) => it && it.id && it.id.videoId)
+      .map((it) => {
+        const vid = it.id.videoId;
+        const stats = statsById[vid] || {};
+        const snip = it.snippet || {};
+        const views = stats.viewCount ? Number(stats.viewCount).toLocaleString() : 'n/a';
+        return `- "${(snip.title || '').trim()}" — ${(snip.channelTitle || '').trim()} (${(snip.publishedAt || '').slice(0, 10)}, ${views} views)`;
+      })
+      .join('\n');
+
+    return compact || null;
+  } catch (err) {
+    console.warn(`[Metadata] YouTube research failed: ${err.message}. Continuing without research.`);
+    return null;
+  }
+}
+
+/**
+ * Strict JSON object parser for metadata. Mirrors parseJsonArray's resilience
+ * (strip reasoning blocks + markdown fences + trailing commas + structural
+ * single-quote fixes), but extracts the outermost {...} object instead of [ ].
+ */
+function parseMetadataJson(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string' || !raw.trim()) {
+    throw new Error('empty AI output');
+  }
+
+  let text = stripReasoning(raw);
+  text = text.replace(/```(?:json)?/gi, '').trim();
+
+  const startIdx = text.indexOf('{');
+  const endIdx = text.lastIndexOf('}');
+  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+    throw new Error('no JSON object found in AI output');
+  }
+  let jsonStr = text.substring(startIdx, endIdx + 1);
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (_) { /* fall through */ }
+
+  try {
+    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(jsonStr);
+  } catch (_) { /* fall through */ }
+
+  try {
+    const fixed = jsonStr
+      .replace(/([{[:,]\s*)'/g, '$1"')
+      .replace(/'(\s*[:,}\]])/g, '"$1');
+    return JSON.parse(fixed);
+  } catch (_) { /* fall through */ }
+
+  throw new Error('AI output was not valid JSON');
+}
+
+/**
+ * Coerce / validate the AI's metadata object into the strict contract required
+ * by the frontend. Any missing or malformed field falls back to a safe value so
+ * metadata generation never breaks script generation.
+ */
+function coerceMetadata(raw, topic, language) {
+  const safeTopic = String(topic || '').trim() || 'this topic';
+  const outputLanguage = LANGUAGE_LABELS[language] || LANGUAGE_LABELS[language] || 'Thai';
+  const isThai = /thai|auto/i.test(String(language)) || outputLanguage === 'Thai';
+
+  const ensureString = (v, fallback) =>
+    typeof v === 'string' && v.trim() ? v.trim() : fallback;
+
+  const ensureStringArray = (v) => {
+    if (Array.isArray(v)) {
+      const cleaned = v.map((x) => (typeof x === 'string' ? x.trim() : '')).filter(Boolean);
+      if (cleaned.length) return cleaned;
+    }
+    return [];
+  };
+
+  const title = ensureString(raw && raw.title, safeTopic).slice(0, 100);
+  const description = ensureString(raw && raw.description,
+    `${safeTopic}\n\nA documentary-style video exploring the story, context, and key details behind ${safeTopic}.`
+  );
+
+  let hashtags = ensureStringArray(raw && raw.hashtags);
+  if (hashtags.length === 0) {
+    hashtags = isThai ? ['#สารคดี', '#เรื่องเล่า', `#${safeTopic}`] : ['#documentary', '#story', `#${safeTopic.split(/\s+/)[0]}`];
+  }
+  hashtags = hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).slice(0, 8);
+
+  const tags = ensureStringArray(raw && raw.tags).slice(0, 15);
+  const thumbnailText = ensureString(raw && raw.thumbnailText, safeTopic).slice(0, 60);
+  const searchKeywords = ensureStringArray(raw && raw.searchKeywords).slice(0, 10);
+  const titleOptions = ensureStringArray(raw && raw.titleOptions)
+    .map((t) => t.slice(0, 100))
+    .slice(0, 5);
+
+  return {
+    title,
+    description,
+    hashtags,
+    tags,
+    thumbnailText,
+    searchKeywords,
+    titleOptions,
+    modelUsed: raw && raw.modelUsed ? raw.modelUsed : undefined,
+  };
+}
+
+/**
+ * A safe fallback metadata object returned when AI metadata generation fails
+ * entirely, so a script-generation response never breaks.
+ */
+function buildFallbackMetadata(topic, language) {
+  const safeTopic = String(topic || '').trim() || 'this topic';
+  return coerceMetadata({}, safeTopic, language);
+}
+
+function buildMetadataPrompt(topic, script, options) {
+  const { language, tone, angle, targetAudience, research } = options;
+
+  const outputLanguage = LANGUAGE_LABELS[language] || 'Thai';
+  const toneInstruction = TONE_LABELS[tone] || 'Use the most fitting tone for the topic.';
+  const angleInstruction = ANGLE_LABELS[angle] || 'Use the most fitting content angle.';
+  const audienceInstruction = targetAudience
+    ? `Target audience: ${targetAudience}`
+    : 'Target audience: curious general viewers interested in this topic.';
+
+  const scriptSummary = summarizeScriptForMetadata(script);
+
+  const researchBlock = research
+    ? `OPTIONAL YOUTUBE COMPETITIVE RESEARCH (use ONLY as directional signal — never copy these titles, descriptions, or phrasings. Find gaps and angles they miss):
+${research}`
+    : 'No YouTube competitive research is provided for this run. Rely on the topic and script only.';
+
+  // Comparison-topic guardrail: when the topic is an "X vs Y" framing, push the
+  // model toward rivalry/narrative titles instead of a flat comparison title.
+  const isComparison = /\bvs\.?\b|\bversus\b/i.test(String(topic));
+  const comparisonGuidance = isComparison
+    ? `COMPARISON TOPIC DETECTED.
+The topic reads as a "X vs Y" comparison. Do NOT produce a flat title like "X vs Y".
+Write titles that frame the rivalry as a story, for example:
+- "Coke vs Pepsi: The Rivalry That Changed Advertising Forever"
+- "Why Coke and Pepsi Have Been Fighting for 100 Years"
+- "Coke vs Pepsi: The Marketing War Nobody Really Won"
+The "title" and every "titleOptions" entry must read as a clickable story, not a label.`
+    : '';
+
+  return `You are an elite YouTube strategist, SEO specialist, and retention editor rolled into one.
+Your entire output must maximize click-through rate, search discovery, and watch intent.
+
+TOPIC: "${topic}"
+
+OUTPUT LANGUAGE: ${outputLanguage}
+Write "title", "description", "thumbnailText", "tags", "searchKeywords", "hashtags", and every "titleOptions" entry in this language.
+Use natural, idiomatic, native-sounding phrasing — never a stiff literal translation.
+${toneInstruction}
+${angleInstruction}
+${audienceInstruction}
+
+${comparisonGuidance}
+
+WHAT THIS VIDEO ACTUALLY COVERS (ground your metadata in this, do not invent content that is not here):
+${scriptSummary}
+
+${researchBlock}
+
+TITLE RULES (applies to "title" AND every entry in "titleOptions"):
+- Must be emotionally clickable and create curiosity.
+- Must include the main topic keyword naturally.
+- Must NOT be fake, misleading, exaggerated, or spammy clickbait.
+- Must be under 100 characters.
+- Avoid generic words like "Amazing", "Shocking", "You Won't Believe" unless they are genuinely accurate.
+
+DESCRIPTION RULES:
+- The first 1-2 lines must hook the viewer and include the main keyword (this is what shows in search/preview).
+- Then summarize what the video covers in 2-4 short paragraphs total.
+- Add natural SEO phrases, not a keyword dump.
+- Do NOT say the video was AI-generated or auto-generated.
+- Do NOT use generic filler like "Welcome to my channel".
+- End the description with 3-5 relevant hashtags.
+
+THUMBNAIL TEXT ("thumbnailText"):
+- A short 2-5 word punchy hook meant to sit on top of the thumbnail image.
+
+TAGS ("tags") and SEARCH KEYWORDS ("searchKeywords"):
+- "tags" are individual lowercase keyword phrases a person might search (comma-style list of 5-15).
+- "searchKeywords" are 2-6 fuller search phrases people would actually type into YouTube search.
+
+HASHTAGS ("hashtags"):
+- 3-6 hashtags, each starting with "#".
+
+STRICT OUTPUT FORMAT:
+Return a single JSON object only.
+No markdown fences. No explanation. No text outside the JSON.
+
+Schema:
+{
+  "title": "string, max 100 characters, clickable but not clickbait",
+  "description": "string, SEO-friendly YouTube description, 2-4 short paragraphs",
+  "hashtags": ["#tag1", "#tag2", "#tag3"],
+  "tags": ["keyword 1", "keyword 2", "keyword 3"],
+  "thumbnailText": "short 2-5 word hook for thumbnail",
+  "searchKeywords": ["main search phrase", "secondary search phrase"],
+  "titleOptions": ["alternative title 1", "alternative title 2", "alternative title 3"]
+}`;
+}
+
+/**
+ * Generate SEO-optimized YouTube metadata (title, description, tags, thumbnail
+ * hook, alternative titles) from a finished script.
+ *
+ * Strategy:
+ *  - Use the smartest model by default (llama-3.3-70b-instruct-fp8-fast),
+ *    overridable via METADATA_MODEL.
+ *  - On any failure, fall back to the same model used for the script, then to a
+ *    deterministic safe fallback object. Never throws.
+ */
+export async function generateYouTubeMetadata(topic, script, options = {}) {
+  const {
+    language = 'thai',
+    tone = 'auto',
+    angle = 'auto',
+    targetAudience = '',
+    research = null,
+    tier = 'standard',
+  } = options;
+
+  const safeTopic = String(topic || '').trim();
+  const scriptModel = resolveScriptModel(tier);
+
+  // Optional YouTube competitive research (only if caller passes it in).
+  let researchSignal = research;
+  const ytApiKey = process.env.YOUTUBE_API_KEY;
+  if (!researchSignal && ytApiKey) {
+    researchSignal = await fetchYouTubeResearch(safeTopic, ytApiKey);
+  }
+
+  const prompt = buildMetadataPrompt(safeTopic, script, {
+    language, tone, angle, targetAudience, research: researchSignal,
+  });
+
+  const systemContent =
+    'You are a YouTube SEO and packaging expert that outputs only valid JSON objects.';
+
+  const tryModel = async (model) => {
+    const result = await runModel(model, {
+      messages: [
+        { role: 'system', content: systemContent },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 2048,
+      temperature: 0.7,
+    });
+    const content = result.result.response || result.result.text;
+    const parsed = parseMetadataJson(content);
+    const coerced = coerceMetadata(parsed, safeTopic, language);
+    coerced.modelUsed = model;
+    return coerced;
+  };
+
+  // Attempt 1: preferred (smartest) metadata model.
+  try {
+    return await tryModel(METADATA_MODEL);
+  } catch (err) {
+    console.warn(`[Metadata] Preferred model (${METADATA_MODEL}) failed: ${err.message}. Falling back to script model.`);
+  }
+
+  // Attempt 2: the same model already used for script generation.
+  if (scriptModel && scriptModel !== METADATA_MODEL) {
+    try {
+      return await tryModel(scriptModel);
+    } catch (err) {
+      console.warn(`[Metadata] Script model (${scriptModel}) failed: ${err.message}. Using fallback metadata.`);
+    }
+  }
+
+  // Attempt 3: deterministic safe fallback.
+  return buildFallbackMetadata(safeTopic, language);
+}
+
 export {
   deriveStoryboardShape,
   summarizeForNextSection,
   parseJsonArray,
   stripReasoning,
   updateFreshnessMemory,
-  maybePolishScript
+  maybePolishScript,
+  buildFallbackMetadata,
+  coerceMetadata,
+  parseMetadataJson,
+  buildMetadataPrompt,
+  fetchYouTubeResearch,
 };
 
 /**
