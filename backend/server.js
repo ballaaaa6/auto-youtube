@@ -173,8 +173,12 @@ app.get('/api/run-pipeline', async (req, res) => {
   } catch (e) {}
 
   try {
-    sendLog('=== Starting Auto YouTube Video Generation Pipeline ===', 5);
-    
+    // ponytail: Disabled downstream video generation steps as requested by the user, keeping the code for future reactivation.
+    sendLog('=== Pipeline is currently disabled. Only script generation is active. ===', 100);
+    res.write(`data: ${JSON.stringify({ status: 'done', message: 'Pipeline is currently disabled. Only script generation is active.' })}\n\n`);
+    res.end();
+
+    /*
     // Step 1: TTS Generation on each narration part
     sendLog('Step 1/6: Synthesizing narration audio via voicertool.com...', 10);
     const trimmedParts = [];
@@ -243,6 +247,7 @@ app.get('/api/run-pipeline', async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ status: 'done', videoUrl: `/output/${outputVideoName}`, videoPath: finalVideoPath })}\n\n`);
     res.end();
+    */
 
   } catch (err) {
     sendLog(`❌ Pipeline execution failed: ${err.message}`);
