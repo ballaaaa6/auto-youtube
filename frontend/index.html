@@ -32,6 +32,64 @@
             <label for="topic-input">หัวข้อคลิปที่ต้องการ (Topic):</label>
             <input type="text" id="topic-input" placeholder="เช่น 5 เรื่องลึกลับใต้ก้นมหาสมุทรที่นักวิทยาศาสตร์ยังหาคำตอบไม่ได้" value="5 เรื่องลึกลับใต้ก้นมหาสมุทร">
           </div>
+
+          <!-- Advanced script settings accordion (collapsed by default) -->
+          <div class="accordion">
+            <button type="button" id="settings-toggle" class="accordion-toggle" aria-expanded="false">
+              <span>⚙️ ตั้งค่าการเขียนบท (ไม่บังคับ)</span>
+              <span id="settings-toggle-arrow" class="accordion-arrow">▾</span>
+            </button>
+
+            <div id="settings-panel" class="accordion-panel" hidden>
+
+              <div class="form-group">
+                <label for="duration-slider">ความยาวคลิป: <span id="duration-value">8 นาที</span></label>
+                <input type="range" id="duration-slider" min="3" max="20" step="1" value="8">
+              </div>
+
+              <div class="form-group">
+                <label for="language-select">ภาษา</label>
+                <select id="language-select">
+                  <option value="auto" selected>🤖 ให้ AI เลือก</option>
+                  <option value="thai">ไทย</option>
+                  <option value="english">English</option>
+                  <option value="japanese">日本語</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="tone-select">โทนการเล่าเรื่อง</label>
+                <select id="tone-select">
+                  <option value="auto" selected>🤖 ให้ AI เลือก</option>
+                  <option value="documentary">สารคดีหรู</option>
+                  <option value="mystery">ลึกลับชวนสงสัย</option>
+                  <option value="fun">ตลกสนุก</option>
+                  <option value="casual">ให้ความรู้เป็นกันเอง</option>
+                  <option value="thriller">ระทึกขย้ำ</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="angle-select">มุมมอง/ประเภทเนื้อหา</label>
+                <select id="angle-select">
+                  <option value="auto" selected>🤖 ให้ AI เลือก</option>
+                  <option value="mystery">ปริศนาลึกลับ</option>
+                  <option value="science">ไขความจริงทางวิทยาศาสตร์</option>
+                  <option value="toplist">Top List</option>
+                  <option value="history">ประวัติศาสตร์เล่าเรื่อง</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>คุณภาพการเขียนบท</label>
+                <div class="tier-toggle" id="tier-toggle">
+                  <button type="button" class="tier-btn active" data-tier="standard">✨ มาตรฐาน</button>
+                  <button type="button" class="tier-btn" data-tier="premium">👑 พล็อตระดับเซียน</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
           <button id="btn-generate-script" class="btn">✨ สั่ง AI เขียนบทพูดและวิเคราะห์ภาพ</button>
         </div>
 
