@@ -63,7 +63,7 @@ app.post('/api/generate-script', async (req, res) => {
   const {
     topic,
     durationMinutes = 8,
-    language = 'auto',
+    language = 'thai',
     tone = 'auto',
     angle = 'auto',
     tier = 'standard',
@@ -328,4 +328,3 @@ app.listen(PORT, () => {
     }
   });
 });
-

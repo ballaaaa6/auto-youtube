@@ -117,7 +117,7 @@ function deriveStoryboardShape(durationMinutes) {
 }
 
 const LANGUAGE_LABELS = {
-  auto: null,
+  auto: 'ภาษาไทย',
   thai: 'ภาษาไทย',
   english: 'English',
   arabic: 'Arabic',
@@ -144,6 +144,18 @@ const TONE_LABELS = {
   fun: 'ตลกสนุก (lighthearted and entertaining)',
   casual: 'ให้ความรู้เป็นกันเอง (friendly, casual explainer)',
   thriller: 'ระทึกขย้ำ (tense, thriller-style)',
+  dramatic: 'ดราม่าเข้มข้น (emotionally charged dramatic storytelling)',
+  inspirational: 'สร้างแรงบันดาลใจ (uplifting and motivational)',
+  dark: 'หม่นลึกกดดัน (dark, heavy, and unsettling)',
+  epic: 'ยิ่งใหญ่อลังการ (epic, grand-scale cinematic tone)',
+  satirical: 'ประชดคมๆ (sharp, witty, satirical delivery)',
+  urgent: 'เร่งด่วนตื่นตัว (urgent, high-stakes pacing)',
+  emotional: 'อารมณ์จัดเต็ม (deeply emotional and immersive)',
+  luxury: 'หรูหราไฮเอนด์ (premium, elegant, luxurious)',
+  analytical: 'วิเคราะห์คมชัด (precise, analytical, insight-driven)',
+  storytelling: 'เล่าเรื่องลื่นไหล (smooth narrative storyteller tone)',
+  news: 'ข่าวจริงจัง (authoritative news-style reporting)',
+  horror: 'สยองขวัญชวนหลอน (creepy, eerie horror tone)',
 };
 
 const ANGLE_LABELS = {
@@ -151,6 +163,21 @@ const ANGLE_LABELS = {
   science: 'ไขความจริงทางวิทยาศาสตร์ (science explainer framing)',
   toplist: 'Top List (countdown/list framing)',
   history: 'ประวัติศาสตร์เล่าเรื่อง (historical storytelling framing)',
+  conspiracy: 'ทฤษฎีสมคบคิด (conspiracy investigation framing)',
+  mythology: 'ตำนานและความเชื่อ (mythology and belief-system framing)',
+  crime: 'คดีจริงและการสืบสวน (true crime investigative framing)',
+  survival: 'เอาตัวรอดและสถานการณ์สุดขีด (survival and extreme-situation framing)',
+  biography: 'ชีวประวัติบุคคลน่าสนใจ (biographical storytelling framing)',
+  technology: 'เทคโนโลยีและอนาคต (technology and future-trends framing)',
+  business: 'ธุรกิจ กลยุทธ์ และอำนาจ (business strategy and power dynamics framing)',
+  psychology: 'จิตวิทยาและพฤติกรรมมนุษย์ (psychology and human-behavior framing)',
+  geopolitics: 'ภูมิรัฐศาสตร์และเกมอำนาจ (geopolitics and power-balance framing)',
+  disaster: 'ภัยพิบัติและเหตุการณ์ใหญ่ (disaster breakdown framing)',
+  war: 'สงครามและยุทธศาสตร์ (warfare and strategy framing)',
+  ancient_civilization: 'อารยธรรมโบราณ (ancient civilization exploration framing)',
+  paranormal: 'เหนือธรรมชาติ (paranormal investigation framing)',
+  social_issue: 'ประเด็นสังคมชวนคิด (social issue analysis framing)',
+  finance: 'การเงินและเศรษฐกิจ (finance and macroeconomics framing)',
 };
 
 function summarizeForNextSection(narrationText) {
@@ -266,7 +293,7 @@ export async function onRequest(context) {
     }
 
     const durationMinutes = body.durationMinutes || 8;
-    const language = body.language || 'auto';
+    const language = body.language || 'thai';
     const tone = body.tone || 'auto';
     const angle = body.angle || 'auto';
     const tier = body.tier || 'standard';

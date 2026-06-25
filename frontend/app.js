@@ -26,6 +26,7 @@ const tierButtons = tierToggle.querySelectorAll('.tier-btn');
 
 let selectedTier = 'standard'; // 'standard' | 'premium'
 let activeCustomSelect = null;
+const DEFAULT_LANGUAGE = 'thai';
 
 function closeCustomSelect(selectRoot) {
   if (!selectRoot) return;
@@ -144,7 +145,11 @@ function loadSavedSettings() {
       durationSlider.value = saved.duration;
       durationValue.textContent = `${saved.duration} นาที`;
     }
-    if (saved.language) languageSelect.value = saved.language;
+    if (saved.language && saved.language !== 'auto') {
+      languageSelect.value = saved.language;
+    } else {
+      languageSelect.value = DEFAULT_LANGUAGE;
+    }
     if (saved.tone) toneSelect.value = saved.tone;
     if (saved.angle) angleSelect.value = saved.angle;
     if (saved.tier) {
@@ -312,9 +317,9 @@ btnGenerateScript.addEventListener('click', async () => {
   const requestPayload = {
     topic,
     durationMinutes: parseInt(durationSlider.value, 10),
-    language: languageSelect.value,   // 'auto' | 'thai' | 'english' | 'japanese'
-    tone: toneSelect.value,           // 'auto' | 'documentary' | 'mystery' | 'fun' | 'casual' | 'thriller'
-    angle: angleSelect.value,         // 'auto' | 'mystery' | 'science' | 'toplist' | 'history'
+    language: languageSelect.value,
+    tone: toneSelect.value,
+    angle: angleSelect.value,
     tier: selectedTier                // 'standard' | 'premium'
   };
 
