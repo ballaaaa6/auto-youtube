@@ -28,6 +28,16 @@ let selectedTier = 'standard'; // 'standard' | 'premium'
 let activeCustomSelect = null;
 const DEFAULT_LANGUAGE = 'thai';
 
+function setFloatingUiState(selectRoot, isOpen) {
+  const formGroup = selectRoot.closest('.form-group');
+  const card = selectRoot.closest('.card');
+  const editorColumn = selectRoot.closest('.editor-container');
+
+  if (formGroup) formGroup.classList.toggle('has-floating-ui', isOpen);
+  if (card) card.classList.toggle('has-floating-ui', isOpen);
+  if (editorColumn) editorColumn.classList.toggle('has-floating-ui', isOpen);
+}
+
 function closeCustomSelect(selectRoot) {
   if (!selectRoot) return;
   selectRoot.classList.remove('open');
@@ -35,6 +45,7 @@ function closeCustomSelect(selectRoot) {
   const menu = selectRoot.querySelector('.custom-select-menu');
   if (button) button.setAttribute('aria-expanded', 'false');
   if (menu) menu.hidden = true;
+  setFloatingUiState(selectRoot, false);
   if (activeCustomSelect === selectRoot) activeCustomSelect = null;
 }
 
@@ -108,6 +119,7 @@ function buildCustomSelect(nativeSelect) {
     wrapper.classList.toggle('open', willOpen);
     button.setAttribute('aria-expanded', String(willOpen));
     menu.hidden = !willOpen;
+    setFloatingUiState(wrapper, willOpen);
     activeCustomSelect = willOpen ? wrapper : null;
   });
 
