@@ -55,6 +55,19 @@ h1 {
   gap: 0.75rem;
 }
 
+.commit-badge {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.58em;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.14);
+  color: #d8ccff;
+  -webkit-text-fill-color: #d8ccff;
+}
+
 .subtitle {
   color: var(--text-secondary);
   font-size: 0.95rem;
