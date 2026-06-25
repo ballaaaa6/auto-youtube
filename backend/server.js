@@ -107,7 +107,11 @@ app.post('/api/generate-script', async (req, res) => {
     res.json({ script });
   } catch (err) {
     console.error('[Script Gen] Error:', err.message);
-    res.status(500).json({ error: err.message });
+    const preview = (err.rawOutput || '').slice(0, 300);
+    const message = preview
+      ? err.message + ' | Raw AI output (first 300 chars): ' + preview
+      : err.message;
+    res.status(500).json({ error: message });
   }
 });
 

@@ -45,7 +45,13 @@ function getAiResponse(result) {
  * Strip them before attempting any parsing.
  */
 function stripReasoning(text) {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // Normal case: a complete <think>...</think> block. Remove it.
+  let stripped = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // Truncation case: <think> opens but </think> never closes (response got
+  // cut off mid-reasoning). Strip everything from the opening <think> to the
+  // end of the string, since the whole answer was lost during reasoning.
+  stripped = stripped.replace(/<think>[\s\S]*$/gi, '');
+  return stripped.trim();
 }
 
 /**
@@ -90,6 +96,25 @@ function parseJsonArray(raw) {
       .replace(/'(\s*[:,}\]])/g, '"$1'); // closing quote before structural char
     return JSON.parse(fixed);
   } catch (_) { /* fall through */ }
+
+  // Attempt 4: salvage complete objects individually. The reasoning model
+  // sometimes gets cut off mid-array (e.g. the last object is truncated),
+  // which invalidates the whole substring above. Pull out every shallow
+  // {...} object with a non-greedy match, parse each on its own, and keep
+  // only the ones that succeed — this rescues the intact sections instead
+  // of discarding the entire result.
+  const objectMatches = jsonStr.match(/\{[^{}]*\}/g);
+  if (objectMatches && objectMatches.length > 0) {
+    const salvaged = [];
+    for (const piece of objectMatches) {
+      try {
+        salvaged.push(JSON.parse(piece));
+      } catch (_) { /* skip this broken piece, keep the good ones */ }
+    }
+    if (salvaged.length > 0) {
+      return salvaged;
+    }
+  }
 
   throw new Error('AI output was not valid JSON');
 }
@@ -303,19 +328,26 @@ export async function onRequest(context) {
     // Step 1: Generate storyboard outline
     const outlinePrompt = buildOutlinePrompt(topic, { durationMinutes, language, tone, angle });
 
-    const MAX_ATTEMPTS = 2;
+    const MAX_ATTEMPTS = 3;
     let outline = [];
     let outlineParsed = false;
     let lastErr;
+    let lastOutlineContent;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const outlineResult = await runModel(env, model, {
         messages: [
           { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON arrays.' },
           { role: 'user', content: outlinePrompt }
         ],
+        // Reasoning models (qwen3) can spend a lot of output budget inside their
+        // <think> block; the default cap truncates the JSON mid-stream. Give it
+        // room to finish, and lower temperature so the structure stays stable.
+        max_tokens: 4096,
+        temperature: 0.4,
       });
 
       const outlineContent = getAiResponse(outlineResult);
+      lastOutlineContent = outlineContent;
       try {
         outline = parseJsonArray(outlineContent);
         outlineParsed = true;
@@ -330,8 +362,9 @@ export async function onRequest(context) {
     }
 
     if (!outlineParsed) {
-      console.error('[Pages Function] Outline JSON could not be parsed after retries.');
-      throw new Error('Failed to parse outline JSON after ' + MAX_ATTEMPTS + ' attempts: ' + (lastErr ? lastErr.message : 'unknown'));
+      console.error('[Pages Function] Outline JSON could not be parsed after retries. Last raw outline output:\n' + lastOutlineContent);
+      const preview = (lastOutlineContent || '').slice(0, 300);
+      throw new Error('Failed to parse outline JSON after ' + MAX_ATTEMPTS + ' attempts: ' + (lastErr ? lastErr.message : 'unknown') + ' | Raw AI output (first 300 chars): ' + preview);
     }
 
     // Step 2: Expand each section to narration, chaining context forward
