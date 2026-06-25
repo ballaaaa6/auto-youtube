@@ -34,8 +34,8 @@ This project adheres to the **Lazy Senior Developer** (Ponytail style) coding gu
 
 ## 3. Continuous Integration & Auto Deployment (CI/CD)
 
-1. **Mandatory Git Push after Edits**:
-   - Every time a file is modified, added, or deleted, the AI Agent **MUST execute Git Add, Commit, and Push to the remote `origin main` immediately** to trigger Cloudflare Pages auto-deploy.
+1. **Mandatory Git Push & Pages Deployment after Edits**:
+   - Every time a file is modified, added, or deleted, the AI Agent **MUST execute Git Add, Commit, and Push to the remote `origin main` immediately**, followed by executing **`npx wrangler pages deploy frontend --project-name=auto-youtube`** to deploy the changes to Cloudflare Pages.
    - Keep commit messages short and clear, summarizing the change in a lazy senior developer style (e.g., `git commit -m "fix: adjust select elements in voicertool tts"`).
 2. **Mandatory Self-Testing**:
    - Before delivering any work or summarizing progress, the AI Agent **must verify the syntax and run the system locally** to guarantee there are no bugs or crash errors. Delivering untested code is strictly prohibited.
