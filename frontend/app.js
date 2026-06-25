@@ -30,6 +30,15 @@ async function initializeBackendUrl() {
     return;
   }
 
+  // If loaded from localhost or local file system, connect directly to local backend port
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+    const defaultLocal = window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin;
+    backendUrl = defaultLocal;
+    localStorage.setItem('backend_url', backendUrl);
+    logToTerminal(`[System] Connected to local backend: ${backendUrl}`, 'system');
+    return;
+  }
+
   // Otherwise, fetch the latest synced URL from the cloud
   try {
     const response = await fetch('https://keyvalue.immanuel.co/api/KeyVal/GetValue/8d5ycaxi/backend_url');

@@ -202,6 +202,7 @@ app.get('/api/run-pipeline', async (req, res) => {
 });
 
 app.use('/output', express.static(OUTPUT_DIR));
+app.use(express.static(path.resolve('../frontend')));
 
 /**
  * API: Upload video to YouTube Studio
