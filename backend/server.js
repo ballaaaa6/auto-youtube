@@ -233,7 +233,31 @@ app.listen(PORT, () => {
   
   // ponytail: Spawn cloudflared tunnel automatically on startup to connect to Cloudflare Pages dashboard.
   const tunnelBin = path.resolve('./node_modules/cloudflared/bin/cloudflared.exe');
-  const cfTunnel = spawn(tunnelBin, ['tunnel', '--url', `http://localhost:${PORT}`]);
+  const tunnelToken = process.env.CLOUDFLARE_TUNNEL_TOKEN;
+  const namedTunnelUrl = process.env.CLOUDFLARE_TUNNEL_URL;
+
+  let cfTunnel;
+  if (tunnelToken) {
+    console.log(`📡 Starting Named Cloudflare Tunnel using token...`);
+    cfTunnel = spawn(tunnelBin, ['tunnel', 'run', '--token', tunnelToken]);
+    
+    if (namedTunnelUrl) {
+      (async () => {
+        try {
+          const hexVal = Buffer.from(namedTunnelUrl.trim()).toString('hex');
+          await fetch(`https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/8d5ycaxi/backend_url/${hexVal}`, {
+            method: 'POST'
+          });
+          console.log(`🚀 Sync complete! Named Tunnel URL (${namedTunnelUrl}) stored on Cloud KV.`);
+        } catch (err) {
+          console.error(`⚠️ Failed to sync named tunnel URL to KV: ${err.message}`);
+        }
+      })();
+    }
+  } else {
+    console.log(`📡 Starting Quick Cloudflare Tunnel (trycloudflare.com)...`);
+    cfTunnel = spawn(tunnelBin, ['tunnel', '--url', `http://localhost:${PORT}`]);
+  }
 
   cfTunnel.on('error', (err) => {
     console.error(`[cloudflared-error] Failed to start tunnel process: ${err.message}`);
