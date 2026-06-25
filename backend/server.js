@@ -10,7 +10,9 @@ import {
   generateOutline, 
   generateSectionNarration, 
   transcribeAudio, 
-  generateImagePromptsForSegments 
+  generateImagePromptsForSegments,
+  deriveStoryboardShape,
+  summarizeForNextSection,
 } from './cloudflare_ai.js';
 import { runTTS } from './automations/voicertool_tts.js';
 import { mergeAudio, trimSilence } from './audio_processor.js';
@@ -58,24 +60,48 @@ async function getAudioDuration(filePath) {
  * API: Generate full narration script in 2 steps (Outline -> Chunk Expansion)
  */
 app.post('/api/generate-script', async (req, res) => {
-  const { topic } = req.body;
+  const {
+    topic,
+    durationMinutes = 8,
+    language = 'auto',
+    tone = 'auto',
+    angle = 'auto',
+    tier = 'standard',
+  } = req.body;
   if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
   try {
-    console.log(`[Script Gen] Generating outline for topic: "${topic}"...`);
-    // Step 1: Generate Outline using Llama 3.3 70B
-    const outline = await generateOutline(topic);
-    console.log(`[Script Gen] Outline created with ${outline.length} sections.`);
+    console.log(`[Script Gen] Generating storyboard outline for topic: "${topic}" (tier=${tier}, duration=${durationMinutes}min)...`);
 
-    // Step 2: Expand each section to narration text using Llama 3.1 8B
+    const outlineOptions = { durationMinutes, language, tone, angle, tier };
+    const outline = await generateOutline(topic, outlineOptions);
+    console.log(`[Script Gen] Storyboard created with ${outline.length} sections.`);
+
+    const { wordsPerSection } = deriveStoryboardShape(durationMinutes);
+    const narrationOptions = { language, tone, tier, wordsPerSection };
+
     const script = [];
+    let previousSummary = null;
+
     for (let i = 0; i < outline.length; i++) {
-      console.log(`[Script Gen] Expanding section ${i + 1}/${outline.length}: "${outline[i]}"...`);
-      const narration = await generateSectionNarration(topic, outline[i], i + 1, outline.length);
+      const section = outline[i];
+      console.log(`[Script Gen] Expanding section ${i + 1}/${outline.length}: "${section.sectionTitle}"...`);
+
+      const narration = await generateSectionNarration(
+        topic,
+        section,
+        i + 1,
+        outline.length,
+        previousSummary,
+        narrationOptions
+      );
+
       script.push({
-        sectionTitle: outline[i],
+        sectionTitle: section.sectionTitle,
         narration: narration
       });
+
+      previousSummary = summarizeForNextSection(narration);
     }
 
     res.json({ script });
