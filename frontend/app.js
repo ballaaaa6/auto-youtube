@@ -12,6 +12,90 @@ const ytDescInput = document.getElementById('yt-desc');
 const btnUploadYt = document.getElementById('btn-upload-yt');
 const btnDownloadVideo = document.getElementById('btn-download-video');
 
+// New script-settings controls
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsPanel = document.getElementById('settings-panel');
+const settingsToggleArrow = document.getElementById('settings-toggle-arrow');
+const durationSlider = document.getElementById('duration-slider');
+const durationValue = document.getElementById('duration-value');
+const languageSelect = document.getElementById('language-select');
+const toneSelect = document.getElementById('tone-select');
+const angleSelect = document.getElementById('angle-select');
+const tierToggle = document.getElementById('tier-toggle');
+const tierButtons = tierToggle.querySelectorAll('.tier-btn');
+
+let selectedTier = 'standard'; // 'standard' | 'premium'
+
+// --- Accordion open/close + persisted settings ---
+const SETTINGS_KEY = 'script_settings_v1';
+
+function loadSavedSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.duration) {
+      durationSlider.value = saved.duration;
+      durationValue.textContent = `${saved.duration} นาที`;
+    }
+    if (saved.language) languageSelect.value = saved.language;
+    if (saved.tone) toneSelect.value = saved.tone;
+    if (saved.angle) angleSelect.value = saved.angle;
+    if (saved.tier) {
+      selectedTier = saved.tier;
+      tierButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tier === selectedTier);
+      });
+    }
+    if (saved.panelOpen) {
+      settingsPanel.hidden = false;
+      settingsToggleArrow.classList.add('open');
+      settingsToggle.setAttribute('aria-expanded', 'true');
+    }
+  } catch (err) {
+    console.warn('Failed to load saved script settings:', err);
+  }
+}
+
+function saveSettings() {
+  const data = {
+    duration: durationSlider.value,
+    language: languageSelect.value,
+    tone: toneSelect.value,
+    angle: angleSelect.value,
+    tier: selectedTier,
+    panelOpen: !settingsPanel.hidden,
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+}
+
+settingsToggle.addEventListener('click', () => {
+  const isOpen = !settingsPanel.hidden;
+  settingsPanel.hidden = isOpen;
+  settingsToggleArrow.classList.toggle('open', !isOpen);
+  settingsToggle.setAttribute('aria-expanded', String(!isOpen));
+  saveSettings();
+});
+
+durationSlider.addEventListener('input', () => {
+  durationValue.textContent = `${durationSlider.value} นาที`;
+  saveSettings();
+});
+
+[languageSelect, toneSelect, angleSelect].forEach(el => {
+  el.addEventListener('change', saveSettings);
+});
+
+tierButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedTier = btn.dataset.tier;
+    tierButtons.forEach(b => b.classList.toggle('active', b === btn));
+    saveSettings();
+  });
+});
+
+loadSavedSettings();
+
 let generatedVideoPath = ''; // Store absolute path of generated video on local backend
 let backendUrl = localStorage.getItem('backend_url') || 'http://localhost:3000';
 // Serverless fallback: the Pages Function runs on the same origin as the dashboard,
@@ -112,6 +196,15 @@ btnGenerateScript.addEventListener('click', async () => {
     return;
   }
 
+  const requestPayload = {
+    topic,
+    durationMinutes: parseInt(durationSlider.value, 10),
+    language: languageSelect.value,   // 'auto' | 'thai' | 'english' | 'japanese'
+    tone: toneSelect.value,           // 'auto' | 'documentary' | 'mystery' | 'fun' | 'casual' | 'thriller'
+    angle: angleSelect.value,         // 'auto' | 'mystery' | 'science' | 'toplist' | 'history'
+    tier: selectedTier                // 'standard' | 'premium'
+  };
+
   btnGenerateScript.disabled = true;
   logToTerminal(`[System] Sending topic "${topic}" to Cloudflare AI for script generation...`, 'system');
   try {
@@ -124,7 +217,7 @@ btnGenerateScript.addEventListener('click', async () => {
       response = await fetch(getScriptGenUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic })
+        body: JSON.stringify(requestPayload)
       });
     } else {
       logToTerminal(`[System] Local backend unreachable. Falling back to serverless AI...`, 'system');
@@ -132,7 +225,7 @@ btnGenerateScript.addEventListener('click', async () => {
       response = await fetch(SERVERLESS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic })
+        body: JSON.stringify(requestPayload)
       });
     }
 
