@@ -45,6 +45,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
 
+// Endpoint to fetch the current local Git commit SHA
+app.get('/api/git-commit', async (req, res) => {
+  try {
+    const { stdout } = await execPromise('git rev-parse --short HEAD');
+    res.json({ commit: stdout.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const TEMP_DIR = path.resolve('./temp');
 const OUTPUT_DIR = path.resolve('./output');
 [TEMP_DIR, OUTPUT_DIR].forEach(dir => {

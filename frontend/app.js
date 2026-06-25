@@ -273,6 +273,42 @@ async function initializeBackendUrl() {
   } catch (err) {
     console.warn('Failed to load cloud backend URL, using cached/default:', err);
   }
+  updateCommitBadge();
+}
+
+// Dynamically fetch and display the current Git commit SHA
+async function updateCommitBadge() {
+  const badge = document.querySelector('.commit-badge');
+  if (!badge) return;
+
+  // 1. Try fetching from the local/tunnel backend if it is alive
+  if (await isBackendAlive(getBackendUrl())) {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/git-commit`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.commit) {
+          badge.textContent = data.commit;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch commit from backend:', e);
+    }
+  }
+
+  // 2. Fallback to querying the GitHub API for the latest commit on main
+  try {
+    const res = await fetch('https://api.github.com/repos/ballaaaa6/auto-youtube/commits/main');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.sha) {
+        badge.textContent = data.sha.substring(0, 7);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch commit SHA from GitHub:', err);
+  }
 }
 
 // Check whether a backend URL is actually reachable by hitting its health endpoint.
